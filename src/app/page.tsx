@@ -28,12 +28,12 @@ export default function Home() {
             See real audit reports
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-            Explore three company profiles with real-world automation issues —
+            Explore four company profiles with real-world automation issues —
             from critical failures to minor optimizations.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {profiles.map((profile) => (
             <ProfileCard key={profile.id} profile={profile} />
           ))}

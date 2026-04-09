@@ -7,7 +7,7 @@ const steps = [
     step: "01",
     title: "Connect your platform",
     description:
-      "Link your Zapier or Make.com account. FlowCheck reads your automations, execution logs, and connection statuses — read-only, nothing is modified.",
+      "Link your Zapier, Make.com, or n8n instance. FlowCheck reads your automations, execution logs, and connection statuses — read-only, nothing is modified.",
   },
   {
     icon: Search,

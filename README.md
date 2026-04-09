@@ -1,23 +1,24 @@
 # FlowCheck
 
-FlowCheck is an AI-powered automation health monitoring tool that audits Zapier and Make.com workflows, detects silent failures, and delivers actionable diagnostic reports.
+FlowCheck is an AI-powered automation health monitoring tool that audits Zapier, Make.com, and n8n workflows, detects silent failures, and delivers actionable diagnostic reports.
 
 ## What It Does
 
-- **Monitors automation workflows** across Zapier and Make.com platforms
-- **Detects silent failures** — expired credentials, broken webhooks, empty field mappings
+- **Monitors automation workflows** across Zapier, Make.com, and n8n platforms
+- **Detects silent failures** — expired credentials, broken webhooks, empty field mappings, infrastructure issues
 - **Generates AI diagnostic reports** using Claude to analyze issues and prioritize fixes
 - **Scores automation health** on a 0-100 scale with severity-based issue tracking (critical, warning, info)
 
 ## Demo
 
-The landing page includes three sample company profiles with real-world automation issues:
+The landing page includes four sample company profiles with real-world automation issues:
 
-| Profile | Health | Industry | Key Issue |
-|---------|--------|----------|-----------|
-| Coastal Content Agency | 34/100 (Critical) | Marketing | Invoice generation down 19 days |
-| GreenLeaf Commerce | 62/100 (Warning) | E-commerce | Post-purchase emails broken 14 days |
-| Creator Stack | 91/100 (Excellent) | Education | Minor API rate limit concern |
+| Profile | Platform | Health | Industry | Key Issue |
+|---------|----------|--------|----------|-----------|
+| Coastal Content Agency | Zapier | 34/100 (Critical) | Marketing | Invoice generation down 19 days |
+| InfraFlow DevOps | n8n | 52/100 (Warning) | SaaS / DevOps | Webhook tunnel expired, DB pool saturated |
+| GreenLeaf Commerce | Make.com | 62/100 (Warning) | E-commerce | Post-purchase emails broken 14 days |
+| Creator Stack | Zapier | 91/100 (Excellent) | Education | Minor API rate limit concern |
 
 Each profile links to a dashboard with a full AI-generated diagnostic narrative.
 

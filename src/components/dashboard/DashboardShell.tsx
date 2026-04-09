@@ -42,7 +42,7 @@ export function DashboardShell({ profile }: DashboardShellProps) {
 
       <footer className="border-t border-border/50 py-8 mt-12 text-center text-sm text-muted-foreground">
         <p>
-          FlowCheck — Automation health monitoring for Zapier &amp; Make.com
+          FlowCheck — Automation health monitoring for Zapier, Make.com &amp; n8n
         </p>
       </footer>
     </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getProfileById } from "@/lib/profiles";
-import { DiagnosticNarrative } from "@/lib/types";
+import { DiagnosticNarrative, getPlatformLabel } from "@/lib/types";
 
 const fallbackNarratives: Record<string, DiagnosticNarrative> = {
   "coastal-content": {
@@ -27,6 +27,14 @@ const fallbackNarratives: Record<string, DiagnosticNarrative> = {
       "The Teachable API rate limit issue deserves attention despite being only a warning, because its impact is concentrated during the highest-stakes moments: course launches. During the last launch, 34 students didn't receive their Day 1 content on time because the enrollment Zap hit the API rate limit. With the next launch in 2 weeks, this problem will repeat — and at scale, delayed content delivery during a launch creates a wave of support tickets, refund requests, and negative reviews that can tank a course's momentum. The fix is straightforward (adding a delay step), but it needs to be implemented before the launch, not during it.",
     recommendations:
       "Priority 1: Add a 2-second delay step between Teachable API calls in the enrollment Zap before your next launch in 2 weeks. Test it with a simulated batch of 50 enrollments to verify it stays within rate limits. Priority 2: Disable the legacy welcome email Zap — your ConvertKit sequence already handles this, and duplicate welcome emails confuse new students. Priority 3: Turn off the redundant Circle community access Zap since the native Teachable-Circle integration handles it. This will save ~45 Zapier tasks per month.",
+  },
+  "infraflow-ops": {
+    overallHealth:
+      "InfraFlow DevOps' self-hosted n8n infrastructure is in a warning state at 52/100, with three critical failures that compound in ways unique to self-hosted environments. Unlike cloud platforms where infrastructure is managed for you, your n8n instance is suffering from memory exhaustion, a dead webhook tunnel, and a saturated database connection pool — all simultaneously. The combination means workflows are failing to execute, external events aren't reaching the system, and even the workflows that do trigger can't persist their results. The warning-level items around encryption key rotation and deprecated nodes add security and reliability risk on top of the operational failures.",
+    mostDangerousIssue:
+      "The expired webhook tunnel is the most dangerous issue because it has severed all communication between your n8n instance and the outside world. GitHub deploy notifications, PagerDuty incident routing, and Stripe payment events are all returning 502 errors. External services typically retry webhook deliveries for 72 hours before giving up permanently — you've already burned 18 of those hours. Once the retry window closes, those events are gone forever: missed deploy notifications won't retrigger, incident alerts won't re-fire, and Stripe payment events will need manual reconciliation. Every hour of delay shrinks your recovery window and increases the manual cleanup required.",
+    recommendations:
+      "Priority 1: Restore the webhook tunnel immediately — run cloudflared service install to set up Cloudflare Tunnel as a persistent system service with automatic reconnection. Once the tunnel is live, check GitHub, PagerDuty, and Stripe webhook delivery logs for failed events in the last 18 hours and replay them. Priority 2: Increase DB_POSTGRESDB_POOL_SIZE from 10 to 25 and restart n8n to clear the connection pool saturation. Deploy PgBouncer as a connection pooler for long-term stability. Priority 3: Set NODE_OPTIONS=--max-old-space-size=4096 and enable n8n queue mode with Redis to distribute execution load, preventing the memory exhaustion from recurring.",
   },
 };
 
@@ -81,7 +89,7 @@ export async function POST(request: NextRequest) {
           content: `Analyze this automation setup and provide a diagnostic report.
 
 Company: ${profile.name}
-Platform: ${profile.platform === "zapier" ? "Zapier" : "Make.com"}
+Platform: ${getPlatformLabel(profile.platform)}
 Total Automations: ${profile.scenarioCount}
 Industry: ${profile.industry}
 Health Score: ${profile.healthScore}/100

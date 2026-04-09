@@ -8,8 +8,8 @@ export function CTA() {
           Stop guessing. Start monitoring.
         </h2>
         <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-          Connect your Zapier or Make.com account and get your first automation
-          health report in under 2 minutes.
+          Connect your Zapier, Make.com, or n8n instance and get your first
+          automation health report in under 2 minutes.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
           <a
@@ -21,7 +21,7 @@ export function CTA() {
           </a>
         </div>
         <p className="mt-4 text-xs text-muted-foreground/50">
-          No account required. Explore three real-world audit profiles.
+          No account required. Explore four real-world audit profiles.
         </p>
       </div>
     </section>

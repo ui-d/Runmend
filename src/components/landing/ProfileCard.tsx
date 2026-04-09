@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AutomationProfile, getHealthStatus, getHealthColorClasses } from "@/lib/types";
+import { AutomationProfile, getHealthStatus, getHealthColorClasses, getPlatformLabel } from "@/lib/types";
 
 interface ProfileCardProps {
   profile: AutomationProfile;
@@ -21,7 +21,7 @@ export function ProfileCard({ profile }: ProfileCardProps) {
               variant="outline"
               className="text-xs uppercase tracking-wider"
             >
-              {profile.platform === "zapier" ? "Zapier" : "Make.com"}
+              {getPlatformLabel(profile.platform)}
             </Badge>
             <div className="flex items-center gap-2">
               <span

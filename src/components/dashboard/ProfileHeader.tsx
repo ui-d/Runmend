@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { AutomationProfile } from "@/lib/types";
+import { AutomationProfile, getPlatformLabel } from "@/lib/types";
 
 interface ProfileHeaderProps {
   profile: AutomationProfile;
@@ -23,7 +23,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
         </h1>
         <div className="flex items-center gap-3 mt-2">
           <Badge variant="outline" className="text-xs uppercase tracking-wider">
-            {profile.platform === "zapier" ? "Zapier" : "Make.com"}
+            {getPlatformLabel(profile.platform)}
           </Badge>
           <span className="text-sm text-muted-foreground">
             {profile.scenarioCount} automations

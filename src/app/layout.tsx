@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 export const metadata: Metadata = {
   title: "FlowCheck — Automation Health Monitor",
   description:
-    "Your automations are probably broken. You just don't know it yet. FlowCheck scans your Zapier and Make.com workflows for silent failures, expiring credentials, and broken mappings.",
+    "Your automations are probably broken. You just don't know it yet. FlowCheck scans your Zapier, Make.com, and n8n workflows for silent failures, expiring credentials, and broken mappings.",
   openGraph: {
     title: "FlowCheck — Automation Health Monitor",
     description:
