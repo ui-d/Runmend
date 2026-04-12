@@ -39,7 +39,7 @@ export async function createProfile(
   input: {
     workspaceId: string;
     name: string;
-    platform: "zapier" | "make" | "n8n";
+    platform: "make" | "n8n";
     industry?: string;
     description?: string;
   }
@@ -65,7 +65,7 @@ export async function updateProfile(
   profileId: string,
   input: {
     name?: string;
-    platform?: "zapier" | "make" | "n8n";
+    platform?: "make" | "n8n";
     industry?: string | null;
     description?: string | null;
     scenario_count?: number;

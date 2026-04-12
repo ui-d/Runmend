@@ -126,7 +126,7 @@ export function DashboardShell({
       {!isAuthenticatedView && (
         <footer className="border-t border-border/50 py-8 mt-12 text-center text-sm text-muted-foreground">
           <p>
-            FlowCheck — Automation health monitoring for Zapier, Make.com &amp; n8n
+            FlowCheck — Automation health monitoring for Make.com &amp; n8n
           </p>
         </footer>
       )}

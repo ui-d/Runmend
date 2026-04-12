@@ -4,6 +4,39 @@ import type { Database } from "@/lib/database.types";
 type Client = SupabaseClient<Database>;
 type ScheduleRow = Database["public"]["Tables"]["audit_schedules"]["Row"];
 
+export interface DueSchedule {
+  id: string;
+  profile_id: string;
+  cron_expression: string;
+}
+
+export async function getDueSchedules(supabase: Client): Promise<DueSchedule[]> {
+  const { data, error } = await supabase
+    .from("audit_schedules")
+    .select("id, profile_id, cron_expression")
+    .eq("is_active", true)
+    .lte("next_run_at", new Date().toISOString());
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function updateScheduleAfterRun(
+  supabase: Client,
+  scheduleId: string,
+  cronExpression: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("audit_schedules")
+    .update({
+      last_run_at: new Date().toISOString(),
+      next_run_at: computeNextRun(cronExpression),
+    })
+    .eq("id", scheduleId);
+
+  if (error) throw error;
+}
+
 export async function getProfileSchedule(
   supabase: Client,
   profileId: string

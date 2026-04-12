@@ -4,11 +4,11 @@ export const profiles: AutomationProfile[] = [
   {
     id: "coastal-content",
     name: "Coastal Content Agency",
-    platform: "zapier",
+    platform: "make",
     scenarioCount: 47,
     industry: "Marketing Agency",
     description:
-      "Full-service content agency running 47 Zapier automations for client onboarding, content scheduling, reporting, and billing.",
+      "Full-service content agency running 47 Make.com scenarios for client onboarding, content scheduling, reporting, and billing.",
     healthScore: 34,
     lastAuditDate: "2026-03-25",
     issues: [
@@ -20,7 +20,7 @@ export const profiles: AutomationProfile[] = [
         businessImpact:
           "New clients are not being onboarded automatically. Your team has been manually creating folders, Slack channels, and Asana projects for the last 3 days — missing SLA windows and burning 2+ hours per new client.",
         recommendation:
-          "Check the webhook trigger URL — it likely expired after your Zapier plan renewal. Reconnect the trigger and test with a sample payload.",
+          "Check the webhook trigger URL — it likely expired after your Make.com plan renewal. Reconnect the trigger and test with a sample payload.",
       },
       {
         id: "cc-2",
@@ -30,7 +30,7 @@ export const profiles: AutomationProfile[] = [
         businessImpact:
           "Zero invoices have been generated or sent in the last 19 days. At your average of 12 invoices/month ($4,200 average), this represents ~$50,000 in unbilled work that clients may dispute if invoiced late.",
         recommendation:
-          "The QuickBooks OAuth token expired. Re-authenticate in Zapier's connection settings, then manually trigger the missed invoices from your billing spreadsheet.",
+          "The QuickBooks OAuth token expired. Re-authenticate in Make.com's connection settings, then manually trigger the missed invoices from your billing spreadsheet.",
       },
       {
         id: "cc-3",
@@ -40,7 +40,7 @@ export const profiles: AutomationProfile[] = [
         businessImpact:
           "Your content calendar shows 34 posts scheduled over the last 2 weeks, but Buffer received 0. Clients paying for social media management have had zero posts published — potential contract violations.",
         recommendation:
-          "Buffer's API changed their rate limit headers. Update the Zap to use Buffer's v2 endpoint, or switch to the native Buffer-Zapier integration which handles this automatically.",
+          "Buffer's API changed their rate limit headers. Update the scenario to use Buffer's v2 endpoint, or switch to the native Buffer module in Make.com which handles this automatically.",
       },
       {
         id: "cc-4",
@@ -50,17 +50,17 @@ export const profiles: AutomationProfile[] = [
         businessImpact:
           "41% of weekly report emails are being sent with 'Hello ,' instead of 'Hello [Client Name],' — the name field mapping is producing empty strings. Clients notice and it looks unprofessional.",
         recommendation:
-          "The Google Sheets column for client names was shifted by one column during a recent sheet restructure. Update the field mapping in step 3 of this Zap to reference column C instead of column B.",
+          "The Google Sheets column for client names was shifted by one column during a recent sheet restructure. Update the field mapping in the Router module to reference column C instead of column B.",
       },
       {
         id: "cc-5",
         severity: "warning",
-        name: "Approaching Zapier Task Limit",
+        name: "Approaching Make.com Operations Limit",
         automationName: "Account-wide",
         businessImpact:
-          "You've used 78% of your monthly Zapier task allocation with 9 days remaining. At current burn rate, you'll hit the limit in 4 days — all automations will pause until the billing cycle resets.",
+          "You've used 78% of your monthly Make.com operations allocation with 9 days remaining. At current burn rate, you'll hit the limit in 4 days — all scenarios will pause until the billing cycle resets.",
         recommendation:
-          "Review your highest-volume Zaps (content scheduling runs ~200 tasks/day). Consider upgrading your plan or optimizing the content batch Zap to process multiple items per task.",
+          "Review your highest-volume scenarios (content scheduling runs ~200 operations/day). Consider upgrading your plan or optimizing the content batch scenario to process multiple items per operation.",
       },
       {
         id: "cc-6",
@@ -68,9 +68,9 @@ export const profiles: AutomationProfile[] = [
         name: "Zombie Automation: Old CRM Migration",
         automationName: "HubSpot → Salesforce Contact Sync",
         businessImpact:
-          "This Zap was created during your CRM migration 8 months ago and is still active, consuming ~30 tasks/month. The migration is complete — these tasks are wasted.",
+          "This scenario was created during your CRM migration 8 months ago and is still active, consuming ~30 operations/month. The migration is complete — these operations are wasted.",
         recommendation:
-          "Turn off this Zap. The migration is done and the sync is no longer needed. This will free up ~30 tasks/month from your quota.",
+          "Turn off this scenario. The migration is done and the sync is no longer needed. This will free up ~30 operations/month from your quota.",
       },
       {
         id: "cc-7",
@@ -78,9 +78,9 @@ export const profiles: AutomationProfile[] = [
         name: "Duplicate Notification Paths",
         automationName: "New Lead → Slack #leads + Email + SMS",
         businessImpact:
-          "Your team gets the same new lead notification via Slack, email, AND SMS — all from separate Zaps. This creates notification fatigue and wastes 3x the tasks. No business risk, but inefficient.",
+          "Your team gets the same new lead notification via Slack, email, AND SMS — all from separate scenarios. This creates notification fatigue and wastes 3x the operations. No business risk, but inefficient.",
         recommendation:
-          "Consolidate into a single multi-step Zap that sends to Slack (primary) and email (backup). Remove the SMS Zap unless your team specifically needs mobile alerts.",
+          "Consolidate into a single multi-step scenario that sends to Slack (primary) and email (backup). Remove the SMS scenario unless your team specifically needs mobile alerts.",
       },
     ],
   },
@@ -170,11 +170,11 @@ export const profiles: AutomationProfile[] = [
   {
     id: "creator-stack",
     name: "Creator Stack",
-    platform: "zapier",
+    platform: "make",
     scenarioCount: 15,
     industry: "Digital Courses",
     description:
-      "Online course creator running 15 Zapier automations for student enrollment, drip content delivery, community access, and payment processing.",
+      "Online course creator running 15 Make.com scenarios for student enrollment, drip content delivery, community access, and payment processing.",
     healthScore: 91,
     lastAuditDate: "2026-03-26",
     issues: [
@@ -184,19 +184,19 @@ export const profiles: AutomationProfile[] = [
         name: "Teachable API Rate Limit Approaching",
         automationName: "New Enrollment → Drip Content Schedule",
         businessImpact:
-          "Your Teachable API usage is at 82% of the hourly rate limit. During your last course launch (200+ enrollments in 1 hour), this Zap hit the limit and 34 students didn't get their Day 1 content on time. Next launch is in 2 weeks.",
+          "Your Teachable API usage is at 82% of the hourly rate limit. During your last course launch (200+ enrollments in 1 hour), this scenario hit the limit and 34 students didn't get their Day 1 content on time. Next launch is in 2 weeks.",
         recommendation:
-          "Add a 2-second delay step between API calls in this Zap, or implement a queue-based approach using Zapier's built-in delay feature to spread enrollments over a longer window during launches.",
+          "Add a Sleep module with a 2-second delay between API calls in this scenario, or use Make.com's built-in rate limiting to spread enrollments over a longer window during launches.",
       },
       {
         id: "cs-2",
         severity: "info",
-        name: "Legacy Welcome Email Zap",
+        name: "Legacy Welcome Email Scenario",
         automationName: "New Student → Welcome Email (Old Template)",
         businessImpact:
-          "This Zap sends a welcome email using your old branding (pre-rebrand 6 months ago). Your new enrollment flow already sends a branded welcome via ConvertKit. 100% of new students get two welcome emails — one old, one new.",
+          "This scenario sends a welcome email using your old branding (pre-rebrand 6 months ago). Your new enrollment flow already sends a branded welcome via ConvertKit. 100% of new students get two welcome emails — one old, one new.",
         recommendation:
-          "Turn off this legacy Zap. Your ConvertKit sequence already handles the welcome email with your current branding. Having two welcome emails confuses students.",
+          "Turn off this legacy scenario. Your ConvertKit sequence already handles the welcome email with your current branding. Having two welcome emails confuses students.",
       },
       {
         id: "cs-3",
@@ -204,9 +204,9 @@ export const profiles: AutomationProfile[] = [
         name: "Community Access Granted Twice",
         automationName: "Payment → Grant Circle Community Access",
         businessImpact:
-          "Students are being added to your Circle community by both this Zap and your Teachable-Circle native integration. No harm done — Circle deduplicates — but you're using unnecessary Zapier tasks.",
+          "Students are being added to your Circle community by both this scenario and your Teachable-Circle native integration. No harm done — Circle deduplicates — but you're using unnecessary Make.com operations.",
         recommendation:
-          "Disable this Zap since the native Teachable-Circle integration handles it. This will save ~45 tasks/month.",
+          "Disable this scenario since the native Teachable-Circle integration handles it. This will save ~45 operations/month.",
       },
     ],
   },

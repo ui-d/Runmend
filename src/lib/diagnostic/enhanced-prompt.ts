@@ -85,7 +85,7 @@ export function buildEnhancedPrompt(
   return `Analyze this automation setup and provide a diagnostic report.
 
 Company: ${profile.name}
-Platform: ${getPlatformLabel(profile.platform as "zapier" | "make" | "n8n")}
+Platform: ${getPlatformLabel(profile.platform as "make" | "n8n")}
 Industry: ${profile.industry || "Not specified"}
 Current Health Score: ${profile.health_score}/100
 

@@ -8,7 +8,7 @@ export function Hero() {
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
         </span>
-        Monitoring Zapier, Make.com &amp; n8n workflows
+        Monitoring Make.com &amp; n8n workflows
       </div>
 
       <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl max-w-4xl">

@@ -9,7 +9,7 @@ export function CTA() {
           Stop guessing. Start monitoring.
         </h2>
         <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-          Connect your Zapier, Make.com, or n8n instance and get your first
+          Connect your Make.com or n8n instance and get your first
           automation health report in under 2 minutes.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">

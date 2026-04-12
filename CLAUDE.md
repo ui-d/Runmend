@@ -4,17 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FlowCheck is an AI-powered automation health monitoring SaaS that audits workflow configurations across Zapier, Make.com, and n8n. It detects silent failures, expired credentials, broken webhooks, and empty field mappings, then generates AI diagnostic reports using Claude API.
+FlowCheck is an AI-powered automation health monitoring SaaS that audits workflow configurations across Make.com and n8n. It detects silent failures, expired credentials, broken webhooks, and empty field mappings, then generates AI diagnostic reports using Claude API.
 
 The app has two paths: a **public demo** at `/dashboard/[profileId]` (4 hardcoded profiles, no auth) and an **authenticated SaaS** at `/app/[workspaceSlug]/...` (multi-tenant workspaces with real platform connections).
 
 ## Commands
 
 ```bash
-npm run dev      # Dev server at localhost:3000
-npm run build    # Production build
-npm run lint     # ESLint
-npm start        # Production server
+npm run dev          # Dev server at localhost:3000
+npm run build        # Production build
+npm run lint         # ESLint
+npm run test         # Vitest in watch mode
+npm run test:run     # Vitest single run
+npm run test:coverage # Vitest with coverage report
+npm start            # Production server
 ```
 
 ## Tech Stack
@@ -25,6 +28,9 @@ npm start        # Production server
 - **Payments**: Stripe (checkout, billing portal, webhooks)
 - **Styling**: Tailwind CSS + shadcn/ui components + Lucide icons
 - **Analytics**: PostHog
+- **Error Tracking**: Sentry (`@sentry/nextjs`)
+- **Testing**: Vitest + Playwright
+- **CI/CD**: GitHub Actions → Vercel
 
 ## Architecture
 
@@ -33,8 +39,7 @@ npm start        # Production server
 - `src/app/(auth)/` — Auth pages (login, signup, forgot-password, reset-password, callback)
 - `src/app/app/` — Authenticated workspace routes with `[workspaceSlug]` dynamic segment
 - `src/app/dashboard/[profileId]/` — Public demo dashboards (no auth)
-- `src/app/api/` — API routes (diagnostic, connections, sync, notifications, schedules, billing)
-- `src/app/api/webhooks/zapier/[token]/` — Zapier webhook receiver (token-authenticated, no user session)
+- `src/app/api/` — API routes (diagnostic, connections, sync, cron, notifications, schedules, billing)
 
 ### Data Layer
 
@@ -48,7 +53,6 @@ npm start        # Production server
 - `src/lib/platform-adapters/` — `PlatformAdapter` interface with factory function `createAdapter(platform, credentials)`
   - `make.ts` — Full Make.com API (zones: us1, eu1, etc.)
   - `n8n.ts` — Self-hosted n8n instances
-  - `zapier.ts` — Webhook-based monitoring (auto-discovers Zaps from incoming webhooks; OAuth mode stubbed for future Partner Program access)
 
 ### Business Logic
 
@@ -83,7 +87,6 @@ npm start        # Production server
 - **RLS helpers**: `get_user_workspace_ids()` and `get_user_admin_workspace_ids()` Postgres functions gate all queries by workspace membership
 - **Input validation**: All API routes use Zod schemas from `src/lib/validation/schemas.ts`. Parse with `safeParse()`, return 400 with `formatZodErrors()` on failure.
 - **Workspace auth**: API routes accepting `workspaceId` must call `getWorkspaceMembership()` after auth check, before any data operations.
-- **Webhook tokens**: Stored as SHA-256 hash (`webhook_token_hash`) for lookup + plaintext for display. Use `hashToken()` from `crypto.ts` for lookups.
 - **Retry logic**: External API calls in platform adapters use `fetchWithRetry()` from `retry.ts` (3 retries, exponential backoff with jitter).
 - **Bulk operations**: Sync engine uses bulk upserts and RPC functions (`update_automation_stats`, `update_profile_scenario_count`) instead of per-row loops.
 
@@ -95,28 +98,28 @@ See `.env.example`. Required for full functionality:
 - `ANTHROPIC_API_KEY` — Claude API (optional; demo profiles have fallback narratives)
 - `ENCRYPTION_KEY` — 64-char hex for AES-256-GCM (`openssl rand -hex 32`)
 - `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — Stripe billing
+- `CRON_SECRET` — Vercel Cron authentication (`openssl rand -hex 32`)
+- `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` — Sentry error tracking (optional)
 - `RESEND_API_KEY` — Email notifications (optional)
 - `CLAUDE_MODEL` — Claude model for diagnostics (optional; defaults to `claude-sonnet-4-6-20250514`)
 
 ## Current State
 
-All 8 phases are complete:
-- **Phase 1**: Supabase foundation (users, workspaces, workspace_members + RLS + triggers)
-- **Phase 2**: Auth (email/password, Google/GitHub OAuth, protected routes, middleware)
-- **Phase 3**: Workspace + profile CRUD with dashboard UI
-- **Phase 4**: Platform connections (Make.com full adapter, n8n adapter, Zapier webhook-based adapter, AES-256-GCM credential encryption)
-- **Phase 5**: Sync engine (automation ingestion, health calculator, 6-rule issue detector)
-- **Phase 6**: Enhanced AI diagnostics (real data prompts, report persistence, history page)
-- **Phase 7**: Monitoring & notifications (audit schedules, Realtime notifications, notification preferences)
-- **Phase 8**: Stripe billing (4 plans, checkout, portal, webhooks), onboarding wizard, plan limit enforcement, error boundaries
+All 8 original phases + production hardening + ship-readiness work complete:
+- **Phases 1-8**: Supabase foundation, auth, workspace CRUD, platform connections (Make.com + n8n), sync engine, AI diagnostics, notifications, Stripe billing
+- **Phase 9**: Security hardening (input validation, workspace auth, redirect protection), performance (bulk DB ops, pagination), reliability (retry with backoff)
+- **Phase 10 (Ship)**: Zapier removed from v1 (unstable API), scheduled sync via Vercel Cron (`/api/cron/sync` every 15 min), test suite (76 tests, 65%+ coverage), Sentry error tracking, security headers, GitHub Actions CI
 
-Zapier uses webhook-based monitoring: users add a "Webhooks by Zapier" POST action to their Zaps pointing to `/api/webhooks/zapier/{token}`. Automations are auto-discovered from incoming webhooks. Full OAuth integration is planned for when Zapier Partner Program access is granted. Stripe requires test/live keys + price IDs in env vars to function. Supabase Edge Function for scheduled sync (`supabase/functions/scheduled-sync/`) is designed but not yet deployed.
+Stripe requires test/live keys + price IDs in env vars. Zapier may be re-added later with Partner Program OAuth access.
 
 Supabase project: `hrcctyebejialsbdyyle` (US East). Test user: `test@flowcheck.dev` / `testpass123`.
 
-## Production Hardening (Phase 9)
+## Deploy Checklist (Vercel)
 
-Security, performance, and reliability improvements applied:
-- **Security**: Open redirect fix, Stripe webhook secret validation, workspace membership checks on all routes, Zod input validation on all API routes, webhook token hashing, replay protection on Zapier webhooks
-- **Performance**: N+1 sync engine queries replaced with bulk upserts and SQL RPC functions (~200 DB round trips → ~8), composite indexes on execution_logs, parallel data fetching in profile page, Make.com adapter pagination (up to 5000 scenarios), execution log retention (90-day pg_cron cleanup)
-- **Reliability**: Exponential backoff retry with jitter on all external API calls (Make.com, n8n), configurable Claude model via `CLAUDE_MODEL` env var
+1. Connect GitHub repo to Vercel (auto-deploys on push to main)
+2. Set all env vars in Vercel dashboard (see Environment Variables section)
+3. **ENCRYPTION_KEY**: Must match dev key if reusing Supabase project, or generate new for fresh DB
+4. **Stripe**: Create new webhook endpoint pointing to `https://<domain>/api/billing/webhook`, use the new signing secret as `STRIPE_WEBHOOK_SECRET`
+5. **Supabase Auth**: Add production URL to `additional_redirect_urls` in Supabase dashboard
+6. **Vercel Cron**: Requires Vercel Pro plan (free tier gets 1 cron, sufficient for this)
+7. Verify: production URL loads, demo profiles work, Stripe checkout completes in test mode

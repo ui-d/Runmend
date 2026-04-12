@@ -29,7 +29,7 @@ export function ProfileForm({
     currentProfileCount !== undefined &&
     currentProfileCount >= profileLimit;
   const [name, setName] = useState("");
-  const [platform, setPlatform] = useState<"zapier" | "make" | "n8n">("zapier");
+  const [platform, setPlatform] = useState<"make" | "n8n">("make");
   const [industry, setIndustry] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -112,11 +112,10 @@ export function ProfileForm({
               id="platform"
               value={platform}
               onChange={(e) =>
-                setPlatform(e.target.value as "zapier" | "make" | "n8n")
+                setPlatform(e.target.value as "make" | "n8n")
               }
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="zapier">Zapier</option>
               <option value="make">Make.com</option>
               <option value="n8n">n8n</option>
             </select>

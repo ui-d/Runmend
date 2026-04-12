@@ -2,7 +2,7 @@ export type IssueSeverity = "critical" | "warning" | "info";
 
 export type HealthStatus = "critical" | "warning" | "stable" | "excellent";
 
-export type Platform = "zapier" | "make" | "n8n";
+export type Platform = "make" | "n8n";
 
 export interface AutomationIssue {
   id: string;
@@ -33,7 +33,6 @@ export interface DiagnosticNarrative {
 
 export function getPlatformLabel(platform: Platform): string {
   const labels: Record<Platform, string> = {
-    zapier: "Zapier",
     make: "Make.com",
     n8n: "n8n",
   };

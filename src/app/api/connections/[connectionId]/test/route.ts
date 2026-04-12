@@ -32,26 +32,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // Webhook connections don't need credential decryption
-    if (connection.auth_type === "webhook") {
-      const isValid = !!connection.webhook_token;
-      await supabase
-        .from("platform_connections")
-        .update({
-          status: isValid ? "active" : "error",
-          error_message: isValid ? null : "Webhook token missing",
-        })
-        .eq("id", connectionId);
-
-      return NextResponse.json({ ok: isValid });
-    }
-
     const apiKey = connection.api_key_encrypted
       ? decrypt(connection.api_key_encrypted)
       : undefined;
 
     const adapter = createAdapter(
-      connection.platform as "zapier" | "make" | "n8n",
+      connection.platform as "make" | "n8n",
       {
         apiKey,
         instanceUrl: connection.instance_url || undefined,

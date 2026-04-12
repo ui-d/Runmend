@@ -152,7 +152,7 @@ export default async function WorkspaceDashboard({ params }: PageProps) {
                         {profile.name}
                       </CardTitle>
                       <Badge variant="outline" className="text-xs">
-                        {getPlatformLabel(profile.platform as "zapier" | "make" | "n8n")}
+                        {getPlatformLabel(profile.platform as "make" | "n8n")}
                       </Badge>
                     </div>
                     {profile.industry && (

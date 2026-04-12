@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ConnectionCard } from "@/components/app/ConnectionCard";
 import { ConnectMakeDialog } from "@/components/app/ConnectMakeDialog";
 import { ConnectN8nDialog } from "@/components/app/ConnectN8nDialog";
-import { ConnectZapierDialog } from "@/components/app/ConnectZapierDialog";
 import type { Database } from "@/lib/database.types";
 
 type ConnectionRow = Database["public"]["Tables"]["platform_connections"]["Row"];
@@ -20,11 +19,6 @@ const PLATFORMS = [
     label: "n8n",
     description: "Connect your self-hosted n8n instance via API key.",
   },
-  {
-    id: "zapier" as const,
-    label: "Zapier",
-    description: "Monitor your Zaps via webhook. Add a webhook action to each Zap.",
-  },
 ];
 
 interface ConnectionsClientProps {
@@ -38,7 +32,6 @@ export function ConnectionsClient({
 }: ConnectionsClientProps) {
   const [makeDialogOpen, setMakeDialogOpen] = useState(false);
   const [n8nDialogOpen, setN8nDialogOpen] = useState(false);
-  const [zapierDialogOpen, setZapierDialogOpen] = useState(false);
 
   function getConnection(platform: string): ConnectionRow | null {
     return connections.find((c) => c.platform === platform) ?? null;
@@ -47,12 +40,11 @@ export function ConnectionsClient({
   function handleConnect(platform: string) {
     if (platform === "make") setMakeDialogOpen(true);
     else if (platform === "n8n") setN8nDialogOpen(true);
-    else if (platform === "zapier") setZapierDialogOpen(true);
   }
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {PLATFORMS.map((p) => (
           <ConnectionCard
             key={p.id}
@@ -73,11 +65,6 @@ export function ConnectionsClient({
       <ConnectN8nDialog
         open={n8nDialogOpen}
         onOpenChange={setN8nDialogOpen}
-        workspaceId={workspaceId}
-      />
-      <ConnectZapierDialog
-        open={zapierDialogOpen}
-        onOpenChange={setZapierDialogOpen}
         workspaceId={workspaceId}
       />
     </>

@@ -4,7 +4,7 @@ const stats = [
   {
     icon: AlertTriangle,
     value: "61%",
-    label: "of Zapier users have had a Zap fail silently",
+    label: "of automation users have had a workflow fail silently",
     sublabel: "without any notification",
   },
   {

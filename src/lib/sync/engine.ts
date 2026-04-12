@@ -52,11 +52,10 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
     : undefined;
 
   const adapter = createAdapter(
-    connection.platform as "zapier" | "make" | "n8n",
+    connection.platform as "make" | "n8n",
     {
       apiKey,
       instanceUrl: connection.instance_url || undefined,
-      authType: (connection.auth_type as "webhook" | "oauth") || undefined,
     }
   );
 

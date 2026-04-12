@@ -4,8 +4,8 @@ import { z } from "zod";
 
 export const connectionCreateSchema = z.object({
   workspaceId: z.string().uuid("Invalid workspace ID"),
-  platform: z.enum(["zapier", "make", "n8n"], {
-    error: "Platform must be zapier, make, or n8n",
+  platform: z.enum(["make", "n8n"], {
+    error: "Platform must be make or n8n",
   }),
   apiKey: z.string().min(1).optional(),
   instanceUrl: z.string().url("Invalid instance URL").optional(),
