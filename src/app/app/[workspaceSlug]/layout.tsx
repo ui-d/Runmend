@@ -5,6 +5,8 @@ import { Sidebar } from "@/components/app/Sidebar";
 import { WorkspaceSelector } from "@/components/app/WorkspaceSelector";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { NotificationBell } from "@/components/app/NotificationBell";
+import { ErrorBoundary } from "@/components/app/ErrorBoundary";
+import { getWorkspaceSubscription } from "@/lib/queries/subscriptions";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,9 +33,11 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps)
     .eq("id", user.id)
     .single();
 
+  const subscription = await getWorkspaceSubscription(supabase, workspace.id);
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar workspaceSlug={workspaceSlug} />
+      <Sidebar workspaceSlug={workspaceSlug} plan={subscription?.plan ?? "free"} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-14 border-b border-border flex items-center justify-between px-6">
           <WorkspaceSelector
@@ -56,7 +60,9 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps)
             />
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </main>
       </div>
     </div>
   );

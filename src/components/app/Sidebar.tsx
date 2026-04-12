@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Link2, Settings, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Link2, Settings, BarChart3, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PlanBadge } from "./PlanBadge";
 
 interface SidebarProps {
   workspaceSlug: string;
+  plan?: string;
 }
 
 const navItems = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
   { label: "Profiles", href: "/profiles", icon: BarChart3 },
   { label: "Connections", href: "/connections", icon: Link2 },
+  { label: "Billing", href: "/billing", icon: CreditCard },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar({ workspaceSlug }: SidebarProps) {
+export function Sidebar({ workspaceSlug, plan }: SidebarProps) {
   const pathname = usePathname();
   const basePath = `/app/${workspaceSlug}`;
 
@@ -52,6 +55,11 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
           );
         })}
       </nav>
+      {plan && (
+        <div className="p-4 border-t border-border">
+          <PlanBadge plan={plan} />
+        </div>
+      )}
     </aside>
   );
 }

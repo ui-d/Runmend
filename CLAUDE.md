@@ -20,8 +20,9 @@ npm start        # Production server
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router), React 18, TypeScript 5
-- **Database/Auth**: Supabase (Postgres + Auth + RLS)
+- **Database/Auth**: Supabase (Postgres + Auth + RLS + Realtime)
 - **AI**: Anthropic Claude SDK (`@anthropic-ai/sdk`) — Sonnet model for diagnostics
+- **Payments**: Stripe (checkout, billing portal, webhooks)
 - **Styling**: Tailwind CSS + shadcn/ui components + Lucide icons
 - **Analytics**: PostHog
 
@@ -32,14 +33,14 @@ npm start        # Production server
 - `src/app/(auth)/` — Auth pages (login, signup, forgot-password, reset-password, callback)
 - `src/app/app/` — Authenticated workspace routes with `[workspaceSlug]` dynamic segment
 - `src/app/dashboard/[profileId]/` — Public demo dashboards (no auth)
-- `src/app/api/` — API routes (diagnostic, connections, sync, notifications, schedules)
+- `src/app/api/` — API routes (diagnostic, connections, sync, notifications, schedules, billing)
 
 ### Data Layer
 
 - `src/lib/supabase/` — Four Supabase clients: `client.ts` (browser), `server.ts` (SSR), `admin.ts` (service role, bypasses RLS), `middleware.ts` (session refresh)
-- `src/lib/queries/` — Typed data access functions (workspaces, profiles, connections, diagnostics, notifications, schedules). All DB access goes through here.
+- `src/lib/queries/` — Typed data access functions (workspaces, profiles, connections, diagnostics, notifications, schedules, subscriptions). All DB access goes through here.
 - `src/lib/database.types.ts` — Supabase-generated types
-- `supabase/migrations/` — 6 migration files defining all tables with RLS policies
+- `supabase/migrations/` — 7 migration files defining all tables with RLS policies
 
 ### Platform Integration Layer
 
@@ -79,10 +80,12 @@ See `.env.example`. Required for full functionality:
 - `SUPABASE_SERVICE_ROLE_KEY` — Server-side admin access
 - `ANTHROPIC_API_KEY` — Claude API (optional; demo profiles have fallback narratives)
 - `ENCRYPTION_KEY` — 64-char hex for AES-256-GCM (`openssl rand -hex 32`)
+- `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — Stripe billing
+- `RESEND_API_KEY` — Email notifications (optional)
 
 ## Current State
 
-Phases 1-7 are complete:
+All 8 phases are complete:
 - **Phase 1**: Supabase foundation (users, workspaces, workspace_members + RLS + triggers)
 - **Phase 2**: Auth (email/password, Google/GitHub OAuth, protected routes, middleware)
 - **Phase 3**: Workspace + profile CRUD with dashboard UI
@@ -90,7 +93,8 @@ Phases 1-7 are complete:
 - **Phase 5**: Sync engine (automation ingestion, health calculator, 6-rule issue detector)
 - **Phase 6**: Enhanced AI diagnostics (real data prompts, report persistence, history page)
 - **Phase 7**: Monitoring & notifications (audit schedules, Realtime notifications, notification preferences)
+- **Phase 8**: Stripe billing (4 plans, checkout, portal, webhooks), onboarding wizard, plan limit enforcement, error boundaries
 
-**Remaining (Phase 8)**: Stripe billing (plans/checkout/webhooks), onboarding wizard, plan limit enforcement, error boundaries, production hardening. Zapier adapter is stubbed pending OAuth Partner Program access.
+Zapier adapter is stubbed pending OAuth Partner Program access. Stripe requires test/live keys + price IDs in env vars to function. Supabase Edge Function for scheduled sync (`supabase/functions/scheduled-sync/`) is designed but not yet deployed.
 
 Supabase project: `hrcctyebejialsbdyyle` (US East). Test user: `test@flowcheck.dev` / `testpass123`.

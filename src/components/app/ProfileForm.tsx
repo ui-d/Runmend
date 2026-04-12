@@ -11,9 +11,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 interface ProfileFormProps {
   workspaceId: string;
   workspaceSlug: string;
+  currentProfileCount?: number;
+  plan?: string;
+  profileLimit?: number;
 }
 
-export function ProfileForm({ workspaceId, workspaceSlug }: ProfileFormProps) {
+export function ProfileForm({
+  workspaceId,
+  workspaceSlug,
+  currentProfileCount,
+  plan,
+  profileLimit,
+}: ProfileFormProps) {
+  const atLimit =
+    profileLimit !== undefined &&
+    profileLimit !== -1 &&
+    currentProfileCount !== undefined &&
+    currentProfileCount >= profileLimit;
   const [name, setName] = useState("");
   const [platform, setPlatform] = useState<"zapier" | "make" | "n8n">("zapier");
   const [industry, setIndustry] = useState("");
@@ -50,6 +64,28 @@ export function ProfileForm({ workspaceId, workspaceSlug }: ProfileFormProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (atLimit) {
+    return (
+      <Card className="max-w-lg border-yellow-500/30 bg-yellow-500/5">
+        <CardContent className="p-6 text-center">
+          <p className="text-sm font-medium mb-2">Profile limit reached</p>
+          <p className="text-xs text-muted-foreground mb-4">
+            Your {plan ?? "free"} plan allows up to {profileLimit} profile
+            {profileLimit !== 1 ? "s" : ""}. Upgrade to create more.
+          </p>
+          <Button
+            onClick={() =>
+              (window.location.href = `/app/${workspaceSlug}/billing`)
+            }
+            size="sm"
+          >
+            Upgrade plan
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

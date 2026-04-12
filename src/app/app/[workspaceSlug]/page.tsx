@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceBySlug } from "@/lib/queries/workspaces";
 import { getWorkspaceProfiles } from "@/lib/queries/profiles";
+import { getWorkspaceConnections } from "@/lib/queries/connections";
 import { getHealthStatus, getHealthColorClasses, getPlatformLabel } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, BarChart3, AlertTriangle, Activity } from "lucide-react";
+import { OnboardingWizard } from "@/components/app/OnboardingWizard";
 
 interface PageProps {
   params: Promise<{ workspaceSlug: string }>;
@@ -25,7 +27,9 @@ export default async function WorkspaceDashboard({ params }: PageProps) {
   if (!workspace) redirect("/app");
 
   const profiles = await getWorkspaceProfiles(supabase, workspace.id);
+  const connections = await getWorkspaceConnections(supabase, workspace.id);
 
+  const hasConnections = connections.some((c) => c.status === "active");
   const totalProfiles = profiles.length;
   const avgHealth =
     totalProfiles > 0
@@ -40,8 +44,18 @@ export default async function WorkspaceDashboard({ params }: PageProps) {
     0
   );
 
+  const showOnboarding = totalProfiles === 0;
+
   return (
     <div className="space-y-8">
+      {showOnboarding && (
+        <OnboardingWizard
+          workspaceSlug={workspaceSlug}
+          hasConnections={hasConnections}
+          hasProfiles={totalProfiles > 0}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
