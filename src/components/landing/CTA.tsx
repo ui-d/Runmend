@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 export function CTA() {
@@ -12,16 +13,22 @@ export function CTA() {
           automation health report in under 2 minutes.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-          <a
-            href="#demo"
+          <Link
+            href="/signup"
             className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium h-10 px-6 hover:bg-primary/90 transition-colors"
           >
-            Try the demo
+            Get started free
             <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+          <a
+            href="#demo"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium h-10 px-6 hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            Try the demo
           </a>
         </div>
         <p className="mt-4 text-xs text-muted-foreground/50">
-          No account required. Explore four real-world audit profiles.
+          Free plan available. No credit card required.
         </p>
       </div>
     </section>

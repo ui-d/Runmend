@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getProfileById } from "@/lib/profiles";
+import { getProfileById as getDemoProfile } from "@/lib/profiles";
 import { DiagnosticNarrative, getPlatformLabel } from "@/lib/types";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { buildEnhancedPrompt } from "@/lib/diagnostic/enhanced-prompt";
+import type { Database } from "@/lib/database.types";
 
 const fallbackNarratives: Record<string, DiagnosticNarrative> = {
   "coastal-content": {
@@ -49,80 +53,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const profile = getProfileById(profileId);
-    if (!profile) {
-      return NextResponse.json(
-        { error: "Profile not found" },
-        { status: 404 }
-      );
+    // Try demo profile first (static data)
+    const demoProfile = getDemoProfile(profileId);
+    if (demoProfile) {
+      return handleDemoDiagnostic(demoProfile, profileId);
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      const fallback = fallbackNarratives[profileId];
-      if (fallback) {
-        return NextResponse.json({ narrative: fallback });
-      }
-      return NextResponse.json(
-        { error: "Diagnostic service unavailable" },
-        { status: 503 }
-      );
-    }
-
-    const issuesList = profile.issues
-      .map(
-        (issue, i) =>
-          `${i + 1}. [${issue.severity.toUpperCase()}] ${issue.name}\n   Automation: ${issue.automationName}\n   Impact: ${issue.businessImpact}`
-      )
-      .join("\n\n");
-
-    const client = new Anthropic({ apiKey });
-
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-6-20250514",
-      max_tokens: 1024,
-      system:
-        "You are an automation health diagnostic AI. You analyze automation platform configurations and provide clear, actionable business-focused assessments. Write in a direct, professional tone. Do not use markdown formatting. Do not use bullet points or numbered lists — write in flowing paragraphs.",
-      messages: [
-        {
-          role: "user",
-          content: `Analyze this automation setup and provide a diagnostic report.
-
-Company: ${profile.name}
-Platform: ${getPlatformLabel(profile.platform)}
-Total Automations: ${profile.scenarioCount}
-Industry: ${profile.industry}
-Health Score: ${profile.healthScore}/100
-
-Issues Found:
-${issuesList}
-
-Provide your analysis as a JSON object with exactly 3 fields:
-- "overallHealth": One paragraph assessing the overall state of this automation stack
-- "mostDangerousIssue": One paragraph identifying the single most dangerous issue and why it demands immediate attention
-- "recommendations": One paragraph with three prioritized recommendations ranked by urgency (most urgent first)
-
-Respond with ONLY the JSON object, no other text.`,
-        },
-      ],
-    });
-
-    const textContent = message.content.find((c) => c.type === "text");
-    if (!textContent || textContent.type !== "text") {
-      throw new Error("No text response from Claude");
-    }
-
-    try {
-      const narrative: DiagnosticNarrative = JSON.parse(textContent.text);
-      return NextResponse.json({ narrative });
-    } catch {
-      // If JSON parsing fails, use fallback
-      const fallback = fallbackNarratives[profileId];
-      if (fallback) {
-        return NextResponse.json({ narrative: fallback });
-      }
-      throw new Error("Failed to parse diagnostic response");
-    }
+    // Authenticated path: database profile
+    return handleDbDiagnostic(profileId);
   } catch (err) {
     // Try fallback on any error
     try {
@@ -140,5 +78,155 @@ Respond with ONLY the JSON object, no other text.`,
       { error: "Failed to generate diagnostic" },
       { status: 500 }
     );
+  }
+}
+
+async function handleDemoDiagnostic(
+  profile: NonNullable<ReturnType<typeof getDemoProfile>>,
+  profileId: string
+) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    const fallback = fallbackNarratives[profileId];
+    if (fallback) return NextResponse.json({ narrative: fallback });
+    return NextResponse.json(
+      { error: "Diagnostic service unavailable" },
+      { status: 503 }
+    );
+  }
+
+  const issuesList = profile.issues
+    .map(
+      (issue, i) =>
+        `${i + 1}. [${issue.severity.toUpperCase()}] ${issue.name}\n   Automation: ${issue.automationName}\n   Impact: ${issue.businessImpact}`
+    )
+    .join("\n\n");
+
+  const prompt = `Analyze this automation setup and provide a diagnostic report.
+
+Company: ${profile.name}
+Platform: ${getPlatformLabel(profile.platform)}
+Total Automations: ${profile.scenarioCount}
+Industry: ${profile.industry}
+Health Score: ${profile.healthScore}/100
+
+Issues Found:
+${issuesList}
+
+Provide your analysis as a JSON object with exactly 3 fields:
+- "overallHealth": One paragraph assessing the overall state of this automation stack
+- "mostDangerousIssue": One paragraph identifying the single most dangerous issue and why it demands immediate attention
+- "recommendations": One paragraph with three prioritized recommendations ranked by urgency (most urgent first)
+
+Respond with ONLY the JSON object, no other text.`;
+
+  return callClaude(apiKey, prompt, profileId);
+}
+
+async function handleDbDiagnostic(profileId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Fetch profile (RLS ensures user has access)
+  const { data: profile } = await supabase
+    .from("automation_profiles")
+    .select("*, automation_issues(*)")
+    .eq("id", profileId)
+    .single();
+
+  if (!profile) {
+    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "Diagnostic service unavailable — API key not configured" },
+      { status: 503 }
+    );
+  }
+
+  // Fetch automations and execution logs for enhanced prompt
+  const { data: automations } = await supabase
+    .from("automations")
+    .select("*")
+    .eq("profile_id", profileId);
+
+  const automationIds = (automations ?? []).map((a) => a.id);
+  let executions: Database["public"]["Tables"]["execution_logs"]["Row"][] = [];
+  if (automationIds.length > 0) {
+    const { data } = await supabase
+      .from("execution_logs")
+      .select("*")
+      .in("automation_id", automationIds)
+      .order("started_at", { ascending: false })
+      .limit(500);
+    executions = data ?? [];
+  }
+
+  const prompt = buildEnhancedPrompt(
+    profile,
+    automations ?? [],
+    executions ?? [],
+    profile.automation_issues ?? []
+  );
+
+  const result = await callClaude(apiKey, prompt, profileId);
+
+  // Persist report using admin client
+  try {
+    const narrative = await result.clone().json();
+    if (narrative.narrative) {
+      const admin = createAdminClient();
+      await admin.from("diagnostic_reports").insert({
+        profile_id: profileId,
+        triggered_by: "manual",
+        overall_health: narrative.narrative.overallHealth,
+        most_dangerous: narrative.narrative.mostDangerousIssue,
+        recommendations: narrative.narrative.recommendations,
+        model_used: "claude-sonnet-4-6-20250514",
+        tokens_used: null,
+      });
+    }
+  } catch {
+    // Don't fail the request if persistence fails
+  }
+
+  return result;
+}
+
+async function callClaude(
+  apiKey: string,
+  prompt: string,
+  profileId: string
+): Promise<NextResponse> {
+  const client = new Anthropic({ apiKey });
+
+  const message = await client.messages.create({
+    model: "claude-sonnet-4-6-20250514",
+    max_tokens: 1024,
+    system:
+      "You are an automation health diagnostic AI. You analyze automation platform configurations and provide clear, actionable business-focused assessments. Write in a direct, professional tone. Do not use markdown formatting. Do not use bullet points or numbered lists — write in flowing paragraphs.",
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const textContent = message.content.find((c) => c.type === "text");
+  if (!textContent || textContent.type !== "text") {
+    throw new Error("No text response from Claude");
+  }
+
+  try {
+    const narrative: DiagnosticNarrative = JSON.parse(textContent.text);
+    return NextResponse.json({ narrative });
+  } catch {
+    const fallback = fallbackNarratives[profileId];
+    if (fallback) return NextResponse.json({ narrative: fallback });
+    throw new Error("Failed to parse diagnostic response");
   }
 }

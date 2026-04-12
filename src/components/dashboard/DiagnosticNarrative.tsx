@@ -1,6 +1,7 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { RefreshCw, History } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ interface DiagnosticNarrativeProps {
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
+  historyUrl?: string;
 }
 
 export function DiagnosticNarrative({
@@ -18,6 +20,7 @@ export function DiagnosticNarrative({
   isLoading,
   error,
   onRetry,
+  historyUrl,
 }: DiagnosticNarrativeProps) {
   return (
     <Card>
@@ -26,17 +29,31 @@ export function DiagnosticNarrative({
           <h2 className="text-sm font-medium text-muted-foreground">
             AI Diagnostic
           </h2>
-          {narrative && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRetry}
-              className="text-xs text-muted-foreground"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Regenerate
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {historyUrl && narrative && (
+              <Link href={historyUrl}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground"
+                >
+                  <History className="h-3 w-3 mr-1" />
+                  History
+                </Button>
+              </Link>
+            )}
+            {narrative && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRetry}
+                className="text-xs text-muted-foreground"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Regenerate
+              </Button>
+            )}
+          </div>
         </div>
 
         {isLoading && (
