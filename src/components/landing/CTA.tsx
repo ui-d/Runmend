@@ -6,11 +6,11 @@ export function CTA() {
     <section className="max-w-5xl mx-auto px-4 py-20">
       <div className="text-center rounded-2xl border border-border/50 bg-muted/30 px-6 py-16">
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Stop guessing. Start monitoring.
+          Stop firefighting. Start monitoring.
         </h2>
         <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-          Connect your Make.com or n8n instance and get your first
-          automation health report in under 2 minutes.
+          Connect your client&apos;s Make.com or n8n instance and get your
+          first health report in under 2 minutes.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
           <Link

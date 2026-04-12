@@ -15,20 +15,20 @@ interface OnboardingWizardProps {
 const STEPS = [
   {
     id: "welcome",
-    title: "Welcome to FlowCheck",
-    description: "Let's set up your automation monitoring in 3 easy steps.",
+    title: "Set up your workspace",
+    description: "Get your automation monitoring running in 3 steps. Monitor all your clients from one dashboard.",
     icon: Zap,
   },
   {
     id: "connect",
-    title: "Connect a platform",
-    description: "Link your Make.com or n8n account to start syncing automation data.",
+    title: "Connect your client's platform",
+    description: "Link a Make.com or n8n account. One connection monitors all scenarios in that account.",
     icon: Link2,
   },
   {
     id: "profile",
-    title: "Create a profile",
-    description: "Set up an automation profile to track and audit your workflows.",
+    title: "Create a client profile",
+    description: "Each profile represents a client or project you're monitoring. You can add more later.",
     icon: BarChart3,
   },
 ];

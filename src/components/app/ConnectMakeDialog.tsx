@@ -69,7 +69,8 @@ export function ConnectMakeDialog({
           <DialogTitle>Connect Make.com</DialogTitle>
           <DialogDescription>
             Enter your Make.com API token. You can find it in Make.com
-            &gt; Profile &gt; API.
+            &gt; Profile &gt; API. Use an organization-level token to
+            monitor all scenarios across teams.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -69,7 +69,9 @@ export function ConnectN8nDialog({
         <DialogHeader>
           <DialogTitle>Connect n8n</DialogTitle>
           <DialogDescription>
-            Enter your self-hosted n8n instance URL and API key.
+            Enter your client&apos;s n8n instance URL and API key. For
+            self-hosted instances, ensure the URL is publicly accessible
+            or reachable from our servers.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

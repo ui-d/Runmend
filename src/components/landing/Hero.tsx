@@ -12,7 +12,7 @@ export function Hero() {
       </div>
 
       <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl max-w-4xl">
-        Your automations are probably broken.{" "}
+        Your clients&apos; automations are breaking.{" "}
         <span className="text-muted-foreground">
           You just don&apos;t know it yet.
         </span>
@@ -20,8 +20,8 @@ export function Hero() {
 
       <p className="mt-6 text-lg text-muted-foreground max-w-2xl leading-relaxed">
         Credentials expire silently. Webhooks stop firing. Fields map to empty
-        strings. FlowCheck catches the failures your automation platform
-        won&apos;t tell you about — before your customers do.
+        strings. FlowCheck monitors all your clients&apos; workflows from one
+        dashboard — so you catch failures before they do.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 mt-10">

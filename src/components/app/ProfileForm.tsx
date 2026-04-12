@@ -70,10 +70,10 @@ export function ProfileForm({
     return (
       <Card className="max-w-lg border-yellow-500/30 bg-yellow-500/5">
         <CardContent className="p-6 text-center">
-          <p className="text-sm font-medium mb-2">Profile limit reached</p>
+          <p className="text-sm font-medium mb-2">Client profile limit reached</p>
           <p className="text-xs text-muted-foreground mb-4">
-            Your {plan ?? "free"} plan allows up to {profileLimit} profile
-            {profileLimit !== 1 ? "s" : ""}. Upgrade to create more.
+            Your {plan ?? "free"} plan allows up to {profileLimit} client profile
+            {profileLimit !== 1 ? "s" : ""}. Upgrade to monitor more clients.
           </p>
           <Button
             onClick={() =>
@@ -96,10 +96,10 @@ export function ProfileForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Profile name</Label>
+            <Label htmlFor="name">Client / Project name</Label>
             <Input
               id="name"
-              placeholder="e.g. Marketing Automations"
+              placeholder="e.g. Acme Corp, Marketing Ops"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -122,7 +122,7 @@ export function ProfileForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="industry">Industry (optional)</Label>
+            <Label htmlFor="industry">Client&apos;s industry (optional)</Label>
             <Input
               id="industry"
               placeholder="e.g. E-commerce, SaaS, Marketing"
@@ -135,7 +135,7 @@ export function ProfileForm({
             <Label htmlFor="description">Description (optional)</Label>
             <Input
               id="description"
-              placeholder="Brief description of this automation stack"
+              placeholder="Brief description of this client's automation stack"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />

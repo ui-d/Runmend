@@ -55,15 +55,15 @@ export function BillingPageClient({
   const plans: { id: PlanId; features: string[] }[] = [
     {
       id: "free",
-      features: ["1 profile", "1 sync/day", "3 diagnostics/month"],
+      features: ["1 client profile", "1 sync/day", "3 AI reports/month"],
     },
     {
       id: "starter",
-      features: ["5 profiles", "4 syncs/day", "20 diagnostics/month", "Email notifications"],
+      features: ["5 client profiles", "4 syncs/day", "20 AI reports/month", "Email alerts"],
     },
     {
       id: "pro",
-      features: ["25 profiles", "24 syncs/day", "Unlimited diagnostics", "Priority support"],
+      features: ["25 client profiles", "24 syncs/day", "Unlimited AI reports", "Priority support"],
     },
   ];
 

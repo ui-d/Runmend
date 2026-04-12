@@ -59,7 +59,7 @@ export function Features() {
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
             FlowCheck monitors the issues that automation platforms surface
-            poorly or not at all.
+            poorly or not at all — across every client account you manage.
           </p>
         </div>
 
