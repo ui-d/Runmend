@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
@@ -40,4 +40,9 @@ export function decrypt(encrypted: string): string {
   decrypted += decipher.final("utf8");
 
   return decrypted;
+}
+
+/** SHA-256 hash for secure token lookups (non-reversible). */
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }

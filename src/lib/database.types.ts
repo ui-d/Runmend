@@ -208,6 +208,7 @@ export type Database = {
           api_key_encrypted: string | null;
           instance_url: string | null;
           webhook_token: string | null;
+          webhook_token_hash: string | null;
           status: "pending" | "active" | "expired" | "revoked" | "error";
           last_synced_at: string | null;
           error_message: string | null;
@@ -226,6 +227,7 @@ export type Database = {
           api_key_encrypted?: string | null;
           instance_url?: string | null;
           webhook_token?: string | null;
+          webhook_token_hash?: string | null;
           status?: "pending" | "active" | "expired" | "revoked" | "error";
           last_synced_at?: string | null;
           error_message?: string | null;
@@ -242,6 +244,7 @@ export type Database = {
           api_key_encrypted?: string | null;
           instance_url?: string | null;
           webhook_token?: string | null;
+          webhook_token_hash?: string | null;
           status?: "pending" | "active" | "expired" | "revoked" | "error";
           last_synced_at?: string | null;
           error_message?: string | null;
@@ -588,7 +591,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      update_automation_stats: {
+        Args: { p_profile_id: string };
+        Returns: undefined;
+      };
+      update_profile_scenario_count: {
+        Args: { p_profile_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       [_ in never]: never;

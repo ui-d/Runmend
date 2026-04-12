@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
-import { encrypt } from "@/lib/crypto";
+import { encrypt, hashToken } from "@/lib/crypto";
 import { createAdapter } from "@/lib/platform-adapters";
+import { getWorkspaceMembership } from "@/lib/security/workspace-auth";
+import { connectionCreateSchema, formatZodErrors } from "@/lib/validation/schemas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,25 +18,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { workspaceId, platform, apiKey, instanceUrl, zone } = body;
-
-    if (!workspaceId || !platform) {
+    const parsed = connectionCreateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "workspaceId and platform are required" },
+        { error: formatZodErrors(parsed.error) },
         { status: 400 }
       );
     }
+    const { workspaceId, platform, apiKey, instanceUrl, zone } = parsed.data;
 
-    if (platform !== "zapier" && platform !== "make" && platform !== "n8n") {
+    const membership = await getWorkspaceMembership(supabase, workspaceId);
+    if (!membership) {
       return NextResponse.json(
-        { error: "Invalid platform" },
-        { status: 400 }
+        { error: "Not a member of this workspace" },
+        { status: 403 }
       );
     }
 
     // Zapier uses webhook-based auth (no API key needed)
     if (platform === "zapier") {
       const webhookToken = randomBytes(32).toString("hex");
+      const webhookTokenHash = hashToken(webhookToken);
       const adapter = createAdapter(platform, { authType: "webhook" });
       const testResult = await adapter.testConnection();
 
@@ -46,6 +50,7 @@ export async function POST(request: NextRequest) {
             platform,
             auth_type: "webhook" as const,
             webhook_token: webhookToken,
+            webhook_token_hash: webhookTokenHash,
             api_key_encrypted: null,
             instance_url: null,
             status: testResult.ok ? "active" : "error",

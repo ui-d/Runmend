@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hashToken } from "@/lib/crypto";
 import { z } from "zod";
 
 const webhookPayloadSchema = z.object({
@@ -19,11 +20,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const admin = createAdminClient();
 
   try {
-    // 1. Validate token against active connections
+    // 1. Validate token against active connections (lookup by hash)
+    const tokenHash = hashToken(token);
     const { data: connection, error: connError } = await admin
       .from("platform_connections")
       .select("id, workspace_id, status")
-      .eq("webhook_token", token)
+      .eq("webhook_token_hash", tokenHash)
       .single();
 
     if (connError || !connection) {
@@ -108,19 +110,32 @@ export async function POST(request: NextRequest, context: RouteContext) {
       automation = newAutomation;
     }
 
-    // 5. Insert execution log
+    // 5. Replay protection: reject stale webhooks (>5 minutes old)
+    const startedAtDate = new Date(payload.startedAt);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (startedAtDate < fiveMinutesAgo) {
+      return NextResponse.json(
+        { error: "Stale webhook rejected" },
+        { status: 400 }
+      );
+    }
+
+    // 6. Upsert execution log (idempotent — prevents duplicate entries on retry)
     const externalId = `${payload.zapId}-${payload.startedAt}`;
 
-    await admin.from("execution_logs").insert({
-      automation_id: automation!.id,
-      external_id: externalId,
-      status: payload.status,
-      started_at: payload.startedAt,
-      finished_at: payload.startedAt,
-      error_message: payload.errorMessage ?? null,
-    });
+    await admin.from("execution_logs").upsert(
+      {
+        automation_id: automation!.id,
+        external_id: externalId,
+        status: payload.status,
+        started_at: payload.startedAt,
+        finished_at: payload.startedAt,
+        error_message: payload.errorMessage ?? null,
+      },
+      { onConflict: "automation_id,external_id", ignoreDuplicates: true }
+    );
 
-    // 6. Update automation metadata
+    // 7. Update automation metadata
     await admin
       .from("automations")
       .update({

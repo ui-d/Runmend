@@ -3,6 +3,7 @@ import type {
   NormalizedAutomation,
   NormalizedExecution,
 } from "./types";
+import { fetchWithRetry } from "./retry";
 
 export class N8nAdapter implements PlatformAdapter {
   private instanceUrl: string;
@@ -18,9 +19,10 @@ export class N8nAdapter implements PlatformAdapter {
 
   async testConnection(): Promise<{ ok: boolean; error?: string }> {
     try {
-      const res = await fetch(`${this.instanceUrl}/api/v1/workflows?limit=1`, {
-        headers: this.headers,
-      });
+      const res = await fetchWithRetry(
+        `${this.instanceUrl}/api/v1/workflows?limit=1`,
+        { headers: this.headers }
+      );
       if (!res.ok) {
         const body = await res.text();
         return { ok: false, error: `n8n API error: ${res.status} ${body}` };
@@ -34,9 +36,10 @@ export class N8nAdapter implements PlatformAdapter {
   }
 
   async fetchAutomations(): Promise<NormalizedAutomation[]> {
-    const res = await fetch(`${this.instanceUrl}/api/v1/workflows?limit=250`, {
-      headers: this.headers,
-    });
+    const res = await fetchWithRetry(
+      `${this.instanceUrl}/api/v1/workflows?limit=250`,
+      { headers: this.headers }
+    );
 
     if (!res.ok) {
       throw new Error(`Failed to fetch workflows: ${res.status}`);
@@ -64,7 +67,7 @@ export class N8nAdapter implements PlatformAdapter {
       const params = new URLSearchParams({ limit: "250" });
       if (cursor) params.set("cursor", cursor);
 
-      const res = await fetch(
+      const res = await fetchWithRetry(
         `${this.instanceUrl}/api/v1/executions?${params}`,
         { headers: this.headers }
       );

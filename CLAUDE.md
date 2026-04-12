@@ -40,8 +40,8 @@ npm start        # Production server
 
 - `src/lib/supabase/` — Four Supabase clients: `client.ts` (browser), `server.ts` (SSR), `admin.ts` (service role, bypasses RLS), `middleware.ts` (session refresh)
 - `src/lib/queries/` — Typed data access functions (workspaces, profiles, connections, diagnostics, notifications, schedules, subscriptions). All DB access goes through here.
-- `src/lib/database.types.ts` — Supabase-generated types
-- `supabase/migrations/` — 8 migration files defining all tables with RLS policies
+- `src/lib/database.types.ts` — Supabase-generated types (includes RPC function types for `update_automation_stats` and `update_profile_scenario_count`)
+- `supabase/migrations/` — 12 migration files defining all tables, RLS policies, indexes, RPC functions, and cron jobs
 
 ### Platform Integration Layer
 
@@ -56,7 +56,15 @@ npm start        # Production server
 - `src/lib/sync/health-calculator.ts` — Weighted score (0-100): error rate 40%, inactive ratio 20%, failure trend 20%, coverage 20%
 - `src/lib/sync/issue-detector.ts` — 6 rules: silent failure, high error rate, error spike, consecutive failures, zombie automation, credential expiration
 - `src/lib/diagnostic/enhanced-prompt.ts` — Builds Claude prompt with execution stats and error patterns
-- `src/lib/crypto.ts` — AES-256-GCM encryption for stored platform credentials
+- `src/lib/crypto.ts` — AES-256-GCM encryption for stored platform credentials + SHA-256 token hashing
+
+### Security Layer
+
+- `src/lib/security/redirect.ts` — OAuth callback redirect validation (allowlist-based, prevents open redirect)
+- `src/lib/security/workspace-auth.ts` — Workspace membership assertion for defense-in-depth on API routes
+- `src/lib/validation/schemas.ts` — Zod schemas for all API route inputs (connections, schedules, billing, diagnostics, notifications)
+- `src/lib/env.ts` — Critical environment variable validation (ENCRYPTION_KEY, STRIPE_WEBHOOK_SECRET)
+- `src/lib/platform-adapters/retry.ts` — Exponential backoff retry wrapper for external API calls
 
 ### Auth & Middleware
 
@@ -73,6 +81,11 @@ npm start        # Production server
 - **Dark mode**: Class-based via Tailwind
 - **API responses**: Diagnostic endpoint returns `{ overallHealth, mostDangerousIssue, recommendations }` — plain text paragraphs, no markdown
 - **RLS helpers**: `get_user_workspace_ids()` and `get_user_admin_workspace_ids()` Postgres functions gate all queries by workspace membership
+- **Input validation**: All API routes use Zod schemas from `src/lib/validation/schemas.ts`. Parse with `safeParse()`, return 400 with `formatZodErrors()` on failure.
+- **Workspace auth**: API routes accepting `workspaceId` must call `getWorkspaceMembership()` after auth check, before any data operations.
+- **Webhook tokens**: Stored as SHA-256 hash (`webhook_token_hash`) for lookup + plaintext for display. Use `hashToken()` from `crypto.ts` for lookups.
+- **Retry logic**: External API calls in platform adapters use `fetchWithRetry()` from `retry.ts` (3 retries, exponential backoff with jitter).
+- **Bulk operations**: Sync engine uses bulk upserts and RPC functions (`update_automation_stats`, `update_profile_scenario_count`) instead of per-row loops.
 
 ## Environment Variables
 
@@ -83,6 +96,7 @@ See `.env.example`. Required for full functionality:
 - `ENCRYPTION_KEY` — 64-char hex for AES-256-GCM (`openssl rand -hex 32`)
 - `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — Stripe billing
 - `RESEND_API_KEY` — Email notifications (optional)
+- `CLAUDE_MODEL` — Claude model for diagnostics (optional; defaults to `claude-sonnet-4-6-20250514`)
 
 ## Current State
 
@@ -99,3 +113,10 @@ All 8 phases are complete:
 Zapier uses webhook-based monitoring: users add a "Webhooks by Zapier" POST action to their Zaps pointing to `/api/webhooks/zapier/{token}`. Automations are auto-discovered from incoming webhooks. Full OAuth integration is planned for when Zapier Partner Program access is granted. Stripe requires test/live keys + price IDs in env vars to function. Supabase Edge Function for scheduled sync (`supabase/functions/scheduled-sync/`) is designed but not yet deployed.
 
 Supabase project: `hrcctyebejialsbdyyle` (US East). Test user: `test@flowcheck.dev` / `testpass123`.
+
+## Production Hardening (Phase 9)
+
+Security, performance, and reliability improvements applied:
+- **Security**: Open redirect fix, Stripe webhook secret validation, workspace membership checks on all routes, Zod input validation on all API routes, webhook token hashing, replay protection on Zapier webhooks
+- **Performance**: N+1 sync engine queries replaced with bulk upserts and SQL RPC functions (~200 DB round trips → ~8), composite indexes on execution_logs, parallel data fetching in profile page, Make.com adapter pagination (up to 5000 scenarios), execution log retention (90-day pg_cron cleanup)
+- **Reliability**: Exponential backoff retry with jitter on all external API calls (Make.com, n8n), configurable Claude model via `CLAUDE_MODEL` env var

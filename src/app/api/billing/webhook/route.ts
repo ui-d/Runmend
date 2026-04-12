@@ -5,6 +5,14 @@ import type Stripe from "stripe";
 import type { PlanId } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return NextResponse.json(
+      { error: "Webhook configuration error" },
+      { status: 500 }
+    );
+  }
+
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
@@ -14,11 +22,7 @@ export async function POST(request: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET ?? ""
-    );
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Invalid signature";
     return NextResponse.json({ error: message }, { status: 400 });

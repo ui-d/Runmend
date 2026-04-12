@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { markAllNotificationsRead } from "@/lib/queries/notifications";
+import { getWorkspaceMembership } from "@/lib/security/workspace-auth";
+import { markAllReadSchema, formatZodErrors } from "@/lib/validation/schemas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,11 +15,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { workspaceId } = await request.json();
-    if (!workspaceId) {
+    const body = await request.json();
+    const parsed = markAllReadSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "workspaceId required" },
+        { error: formatZodErrors(parsed.error) },
         { status: 400 }
+      );
+    }
+    const { workspaceId } = parsed.data;
+
+    const membership = await getWorkspaceMembership(supabase, workspaceId);
+    if (!membership) {
+      return NextResponse.json(
+        { error: "Not a member of this workspace" },
+        { status: 403 }
       );
     }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserNotifications } from "@/lib/queries/notifications";
+import { notificationQuerySchema } from "@/lib/validation/schemas";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,9 +15,16 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get("workspaceId") ?? undefined;
-    const unreadOnly = searchParams.get("unreadOnly") === "true";
-    const limit = parseInt(searchParams.get("limit") ?? "20", 10);
+    const rawLimit = parseInt(searchParams.get("limit") ?? "20", 10);
+    const parsed = notificationQuerySchema.safeParse({
+      workspaceId: searchParams.get("workspaceId") ?? undefined,
+      unreadOnly: searchParams.get("unreadOnly") === "true",
+      limit: isNaN(rawLimit) ? 20 : rawLimit,
+    });
+
+    const { workspaceId, unreadOnly, limit } = parsed.success
+      ? parsed.data
+      : { workspaceId: undefined, unreadOnly: false, limit: 20 };
 
     const notifications = await getUserNotifications(supabase, user.id, {
       workspaceId,

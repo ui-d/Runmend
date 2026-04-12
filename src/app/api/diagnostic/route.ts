@@ -5,6 +5,7 @@ import { DiagnosticNarrative, getPlatformLabel } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildEnhancedPrompt } from "@/lib/diagnostic/enhanced-prompt";
+import { diagnosticSchema, formatZodErrors } from "@/lib/validation/schemas";
 import type { Database } from "@/lib/database.types";
 
 const fallbackNarratives: Record<string, DiagnosticNarrative> = {
@@ -44,14 +45,15 @@ const fallbackNarratives: Record<string, DiagnosticNarrative> = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { profileId } = await request.json();
-
-    if (!profileId || typeof profileId !== "string") {
+    const body = await request.json();
+    const parsed = diagnosticSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "profileId is required" },
+        { error: formatZodErrors(parsed.error) },
         { status: 400 }
       );
     }
+    const { profileId } = parsed.data;
 
     // Try demo profile first (static data)
     const demoProfile = getDemoProfile(profileId);
@@ -190,7 +192,7 @@ async function handleDbDiagnostic(profileId: string) {
         overall_health: narrative.narrative.overallHealth,
         most_dangerous: narrative.narrative.mostDangerousIssue,
         recommendations: narrative.narrative.recommendations,
-        model_used: "claude-sonnet-4-6-20250514",
+        model_used: process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6-20250514",
         tokens_used: null,
       });
     }
@@ -209,7 +211,7 @@ async function callClaude(
   const client = new Anthropic({ apiKey });
 
   const message = await client.messages.create({
-    model: "claude-sonnet-4-6-20250514",
+    model: process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6-20250514",
     max_tokens: 1024,
     system:
       "You are an automation health diagnostic AI. You analyze automation platform configurations and provide clear, actionable business-focused assessments. Write in a direct, professional tone. Do not use markdown formatting. Do not use bullet points or numbered lists — write in flowing paragraphs.",

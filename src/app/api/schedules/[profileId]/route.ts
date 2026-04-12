@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileSchedule, upsertSchedule, toggleSchedule } from "@/lib/queries/schedules";
+import { scheduleUpsertSchema, scheduleToggleSchema, formatZodErrors } from "@/lib/validation/schemas";
 
 interface RouteContext {
   params: Promise<{ profileId: string }>;
@@ -40,11 +41,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
+    const parsed = scheduleUpsertSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: formatZodErrors(parsed.error) },
+        { status: 400 }
+      );
+    }
+
     const schedule = await upsertSchedule(
       supabase,
       profileId,
-      body.cronExpression,
-      body.isActive ?? true
+      parsed.data.cronExpression,
+      parsed.data.isActive
     );
 
     return NextResponse.json({ schedule });
@@ -67,8 +76,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { isActive } = await request.json();
-    await toggleSchedule(supabase, profileId, isActive);
+    const body = await request.json();
+    const parsed = scheduleToggleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: formatZodErrors(parsed.error) },
+        { status: 400 }
+      );
+    }
+    await toggleSchedule(supabase, profileId, parsed.data.isActive);
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     const message =

@@ -21,17 +21,17 @@ export default async function ProfileDetailPage({ params }: PageProps) {
   const dbProfile = await getProfileById(supabase, profileId);
   if (!dbProfile) notFound();
 
-  // Check if there's an active connection for this profile's platform
-  const { data: connection } = await supabase
-    .from("platform_connections")
-    .select("id, status, last_synced_at")
-    .eq("workspace_id", dbProfile.workspace_id)
-    .eq("platform", dbProfile.platform)
-    .eq("status", "active")
-    .maybeSingle();
-
-  // Check if auto-sync schedule exists
-  const schedule = await getProfileSchedule(supabase, profileId);
+  // Parallel fetch: connection and schedule are independent after profile load
+  const [{ data: connection }, schedule] = await Promise.all([
+    supabase
+      .from("platform_connections")
+      .select("id, status, last_synced_at")
+      .eq("workspace_id", dbProfile.workspace_id)
+      .eq("platform", dbProfile.platform)
+      .eq("status", "active")
+      .maybeSingle(),
+    getProfileSchedule(supabase, profileId),
+  ]);
 
   const profile = normalizeProfile(dbProfile, dbProfile.automation_issues);
 

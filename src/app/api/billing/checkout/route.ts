@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, getOrCreateStripeCustomer, STRIPE_PRICE_IDS } from "@/lib/stripe";
+import { getWorkspaceMembership } from "@/lib/security/workspace-auth";
+import { checkoutSchema, formatZodErrors } from "@/lib/validation/schemas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,19 +16,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { workspaceId, plan } = await request.json();
-
-    if (!workspaceId || !plan) {
+    const body = await request.json();
+    const parsed = checkoutSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "workspaceId and plan are required" },
+        { error: formatZodErrors(parsed.error) },
         { status: 400 }
+      );
+    }
+    const { workspaceId, plan } = parsed.data;
+
+    const membership = await getWorkspaceMembership(supabase, workspaceId);
+    if (!membership) {
+      return NextResponse.json(
+        { error: "Not a member of this workspace" },
+        { status: 403 }
       );
     }
 
     const priceId = STRIPE_PRICE_IDS[plan];
     if (!priceId) {
       return NextResponse.json(
-        { error: "Invalid plan or price not configured" },
+        { error: "Price not configured for this plan" },
         { status: 400 }
       );
     }

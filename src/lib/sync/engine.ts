@@ -60,57 +60,43 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
     }
   );
 
-  // 4. Fetch automations from platform
+  // 4. Fetch automations from platform (bulk upsert)
   let automationsUpserted = 0;
   try {
     const rawAutomations = await adapter.fetchAutomations();
 
-    for (const raw of rawAutomations) {
+    if (rawAutomations.length > 0) {
+      const rows = rawAutomations.map((raw) => ({
+        connection_id: connection.id,
+        profile_id: profileId,
+        external_id: raw.externalId,
+        name: raw.name,
+        status: raw.status,
+        trigger_type: raw.triggerType,
+        last_run_at: raw.lastRunAt,
+      }));
+
       const { error: upsertError } = await admin
         .from("automations")
-        .upsert(
-          {
-            connection_id: connection.id,
-            profile_id: profileId,
-            external_id: raw.externalId,
-            name: raw.name,
-            status: raw.status,
-            trigger_type: raw.triggerType,
-            last_run_at: raw.lastRunAt,
-          },
-          { onConflict: "connection_id,external_id" }
-        );
+        .upsert(rows, { onConflict: "connection_id,external_id" });
 
       if (upsertError) {
-        errors.push(`Failed to upsert automation ${raw.name}: ${upsertError.message}`);
+        errors.push(`Failed to upsert automations: ${upsertError.message}`);
       } else {
-        automationsUpserted++;
+        automationsUpserted = rawAutomations.length;
       }
     }
 
-    // Update profile scenario count
-    if (connection.auth_type === "webhook") {
-      // For webhook connections, count automations already in DB (populated by webhooks)
-      const { count } = await admin
-        .from("automations")
-        .select("id", { count: "exact", head: true })
-        .eq("profile_id", profileId);
-      await admin
-        .from("automation_profiles")
-        .update({ scenario_count: count ?? 0 })
-        .eq("id", profileId);
-    } else {
-      await admin
-        .from("automation_profiles")
-        .update({ scenario_count: rawAutomations.length })
-        .eq("id", profileId);
-    }
+    // Update profile scenario count atomically via RPC
+    await admin.rpc("update_profile_scenario_count", {
+      p_profile_id: profileId,
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to fetch automations";
     errors.push(msg);
   }
 
-  // 5. Fetch execution logs
+  // 5. Fetch execution logs (bulk upsert)
   let executionsInserted = 0;
   const sinceDate = connection.last_synced_at
     ? new Date(connection.last_synced_at)
@@ -129,28 +115,34 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
       (dbAutomations ?? []).map((a) => [a.external_id, a.id])
     );
 
-    for (const raw of rawExecutions) {
-      const automationId = extToDbId.get(raw.automationExternalId);
-      if (!automationId) continue;
+    const execRows = rawExecutions
+      .map((raw) => {
+        const automationId = extToDbId.get(raw.automationExternalId);
+        if (!automationId) return null;
+        return {
+          automation_id: automationId,
+          external_id: raw.externalId || null,
+          status: raw.status,
+          started_at: raw.startedAt,
+          finished_at: raw.finishedAt,
+          error_message: raw.errorMessage,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
 
+    if (execRows.length > 0) {
       const { error: insertError } = await admin
         .from("execution_logs")
-        .upsert(
-          {
-            automation_id: automationId,
-            external_id: raw.externalId || null,
-            status: raw.status,
-            started_at: raw.startedAt,
-            finished_at: raw.finishedAt,
-            error_message: raw.errorMessage,
-          },
-          {
-            onConflict: "automation_id,external_id",
-            ignoreDuplicates: true,
-          }
-        );
+        .upsert(execRows, {
+          onConflict: "automation_id,external_id",
+          ignoreDuplicates: true,
+        });
 
-      if (!insertError) executionsInserted++;
+      if (insertError) {
+        errors.push(`Failed to insert executions: ${insertError.message}`);
+      } else {
+        executionsInserted = execRows.length;
+      }
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to fetch executions";
@@ -206,22 +198,8 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
     .update({ last_synced_at: new Date().toISOString() })
     .eq("id", connection.id);
 
-  // 12. Update per-automation stats
-  for (const automation of allAutomations ?? []) {
-    const autoExecs = allExecutions.filter(
-      (e) => e.automation_id === automation.id
-    );
-    const totalRuns = autoExecs.length;
-    const failedRuns = autoExecs.filter((e) => e.status === "error").length;
-    const successRate = totalRuns > 0
-      ? Math.round(((totalRuns - failedRuns) / totalRuns) * 10000) / 100
-      : null;
-
-    await admin
-      .from("automations")
-      .update({ total_runs: totalRuns, failed_runs: failedRuns, success_rate: successRate })
-      .eq("id", automation.id);
-  }
+  // 12. Update per-automation stats in a single SQL query via RPC
+  await admin.rpc("update_automation_stats", { p_profile_id: profileId });
 
   return {
     automationsUpserted,
@@ -248,32 +226,35 @@ async function syncIssues(
     detected.map((d) => `${d.name}::${d.automationName}`)
   );
 
-  for (const ex of existing ?? []) {
-    const key = `${ex.name}::${ex.automation_name}`;
-    if (!detectedKeys.has(key)) {
-      await admin
-        .from("automation_issues")
-        .update({ status: "resolved", resolved_at: new Date().toISOString() })
-        .eq("id", ex.id);
-    }
+  // Batch resolve: collect IDs of issues no longer detected
+  const idsToResolve = (existing ?? [])
+    .filter((ex) => !detectedKeys.has(`${ex.name}::${ex.automation_name}`))
+    .map((ex) => ex.id);
+
+  if (idsToResolve.length > 0) {
+    await admin
+      .from("automation_issues")
+      .update({ status: "resolved", resolved_at: new Date().toISOString() })
+      .in("id", idsToResolve);
   }
 
-  // Insert new issues (skip if already exists and open)
+  // Batch insert: collect new issues not already open
   const existingKeys = new Set(
     (existing ?? []).map((e) => `${e.name}::${e.automation_name}`)
   );
 
-  for (const issue of detected) {
-    const key = `${issue.name}::${issue.automationName}`;
-    if (!existingKeys.has(key)) {
-      await admin.from("automation_issues").insert({
-        profile_id: profileId,
-        severity: issue.severity,
-        name: issue.name,
-        automation_name: issue.automationName,
-        business_impact: issue.businessImpact,
-        recommendation: issue.recommendation,
-      });
-    }
+  const newIssues = detected
+    .filter((issue) => !existingKeys.has(`${issue.name}::${issue.automationName}`))
+    .map((issue) => ({
+      profile_id: profileId,
+      severity: issue.severity,
+      name: issue.name,
+      automation_name: issue.automationName,
+      business_impact: issue.businessImpact,
+      recommendation: issue.recommendation,
+    }));
+
+  if (newIssues.length > 0) {
+    await admin.from("automation_issues").insert(newIssues);
   }
 }

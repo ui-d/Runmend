@@ -3,6 +3,7 @@ import type {
   NormalizedAutomation,
   NormalizedExecution,
 } from "./types";
+import { fetchWithRetry } from "./retry";
 
 export class MakeAdapter implements PlatformAdapter {
   private baseUrl: string;
@@ -18,7 +19,7 @@ export class MakeAdapter implements PlatformAdapter {
 
   async testConnection(): Promise<{ ok: boolean; error?: string }> {
     try {
-      const res = await fetch(`${this.baseUrl}/users/me`, {
+      const res = await fetchWithRetry(`${this.baseUrl}/users/me`, {
         headers: this.headers,
       });
       if (!res.ok) {
@@ -34,59 +35,81 @@ export class MakeAdapter implements PlatformAdapter {
   }
 
   async fetchAutomations(): Promise<NormalizedAutomation[]> {
-    const res = await fetch(`${this.baseUrl}/scenarios?pg[limit]=500`, {
-      headers: this.headers,
-    });
+    const allScenarios: NormalizedAutomation[] = [];
+    const pageSize = 500;
+    const maxPages = 10;
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch scenarios: ${res.status}`);
+    for (let page = 0; page < maxPages; page++) {
+      const offset = page * pageSize;
+      const res = await fetchWithRetry(
+        `${this.baseUrl}/scenarios?pg[limit]=${pageSize}&pg[offset]=${offset}`,
+        { headers: this.headers }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch scenarios: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const scenarios = data.scenarios ?? data ?? [];
+
+      const normalized = scenarios.map(
+        (s: Record<string, unknown>): NormalizedAutomation => ({
+          externalId: String(s.id),
+          name: String(s.name || "Unnamed Scenario"),
+          status: s.islinked ? "active" : "inactive",
+          triggerType: null,
+          lastRunAt: s.lastEdit ? String(s.lastEdit) : null,
+        })
+      );
+
+      allScenarios.push(...normalized);
+
+      // Stop if we got fewer than a full page
+      if (scenarios.length < pageSize) break;
     }
 
-    const data = await res.json();
-    const scenarios = data.scenarios ?? data ?? [];
-
-    return scenarios.map(
-      (s: Record<string, unknown>): NormalizedAutomation => ({
-        externalId: String(s.id),
-        name: String(s.name || "Unnamed Scenario"),
-        status: s.islinked ? "active" : "inactive",
-        triggerType: null,
-        lastRunAt: s.lastEdit ? String(s.lastEdit) : null,
-      })
-    );
+    return allScenarios;
   }
 
   async fetchExecutionLogs(since: Date): Promise<NormalizedExecution[]> {
     const executions: NormalizedExecution[] = [];
-
-    // Fetch scenarios first to get IDs
     const automations = await this.fetchAutomations();
+    const sinceStr = since.toISOString();
 
-    for (const automation of automations.slice(0, 50)) {
-      try {
-        const sinceStr = since.toISOString();
-        const res = await fetch(
-          `${this.baseUrl}/scenarios/${automation.externalId}/logs?pg[limit]=100&from=${sinceStr}`,
-          { headers: this.headers }
-        );
+    // Process in chunks of 10 to avoid rate limiting
+    const chunkSize = 10;
+    for (let i = 0; i < automations.length; i += chunkSize) {
+      const chunk = automations.slice(i, i + chunkSize);
+      const results = await Promise.allSettled(
+        chunk.map(async (automation) => {
+          const res = await fetchWithRetry(
+            `${this.baseUrl}/scenarios/${automation.externalId}/logs?pg[limit]=100&from=${sinceStr}`,
+            { headers: this.headers }
+          );
 
-        if (!res.ok) continue;
+          if (!res.ok) return [];
 
-        const data = await res.json();
-        const logs = Array.isArray(data) ? data : data.scenarioLogs ?? [];
+          const data = await res.json();
+          const logs = Array.isArray(data) ? data : data.scenarioLogs ?? [];
 
-        for (const log of logs) {
-          executions.push({
-            externalId: String(log.id ?? log.executionId ?? ""),
-            automationExternalId: automation.externalId,
-            status: mapMakeStatus(log.status),
-            startedAt: String(log.timestamp ?? log.startedAt ?? ""),
-            finishedAt: log.finishedAt ? String(log.finishedAt) : null,
-            errorMessage: log.error ? String(log.error) : null,
-          });
+          return logs.map(
+            (log: Record<string, unknown>): NormalizedExecution => ({
+              externalId: String(log.id ?? log.executionId ?? ""),
+              automationExternalId: automation.externalId,
+              status: mapMakeStatus(log.status),
+              startedAt: String(log.timestamp ?? log.startedAt ?? ""),
+              finishedAt: log.finishedAt ? String(log.finishedAt) : null,
+              errorMessage: log.error ? String(log.error) : null,
+            })
+          );
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          executions.push(...result.value);
         }
-      } catch {
-        // Skip scenarios that fail to fetch logs
       }
     }
 

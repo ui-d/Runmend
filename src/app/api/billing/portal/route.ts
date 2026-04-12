@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
+import { getWorkspaceMembership } from "@/lib/security/workspace-auth";
+import { portalSchema, formatZodErrors } from "@/lib/validation/schemas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +15,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { workspaceId } = await request.json();
+    const body = await request.json();
+    const parsed = portalSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: formatZodErrors(parsed.error) },
+        { status: 400 }
+      );
+    }
+    const { workspaceId } = parsed.data;
+
+    const membership = await getWorkspaceMembership(supabase, workspaceId);
+    if (!membership) {
+      return NextResponse.json(
+        { error: "Not a member of this workspace" },
+        { status: 403 }
+      );
+    }
 
     const { data: subscription } = await supabase
       .from("subscriptions")
