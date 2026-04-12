@@ -56,6 +56,7 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
     {
       apiKey,
       instanceUrl: connection.instance_url || undefined,
+      authType: (connection.auth_type as "webhook" | "oauth") || undefined,
     }
   );
 
@@ -88,10 +89,22 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
     }
 
     // Update profile scenario count
-    await admin
-      .from("automation_profiles")
-      .update({ scenario_count: rawAutomations.length })
-      .eq("id", profileId);
+    if (connection.auth_type === "webhook") {
+      // For webhook connections, count automations already in DB (populated by webhooks)
+      const { count } = await admin
+        .from("automations")
+        .select("id", { count: "exact", head: true })
+        .eq("profile_id", profileId);
+      await admin
+        .from("automation_profiles")
+        .update({ scenario_count: count ?? 0 })
+        .eq("id", profileId);
+    } else {
+      await admin
+        .from("automation_profiles")
+        .update({ scenario_count: rawAutomations.length })
+        .eq("id", profileId);
+    }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to fetch automations";
     errors.push(msg);

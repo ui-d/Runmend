@@ -94,20 +94,21 @@ Open [http://localhost:3000](http://localhost:3000).
 - `src/app/app/[workspaceSlug]/` — Authenticated workspace routes (dashboard, connections, diagnostics, settings)
 - `src/app/dashboard/[profileId]/` — Public demo dashboards (no auth)
 - `src/app/api/` — API routes (diagnostic, connections, sync, notifications, schedules, billing)
+- `src/app/api/webhooks/zapier/[token]/` — Zapier webhook receiver (token-authenticated, no user session)
 
 ### Data Layer
 
 - `src/lib/supabase/` — Four Supabase clients: browser, SSR, admin (service role), middleware (session refresh)
 - `src/lib/queries/` — Typed data access functions for workspaces, profiles, connections, diagnostics, notifications, schedules, subscriptions
 - `src/lib/database.types.ts` — Supabase-generated types
-- `supabase/migrations/` — 7 migration files with RLS policies
+- `supabase/migrations/` — 8 migration files with RLS policies
 
 ### Platform Integrations
 
 - `src/lib/platform-adapters/` — `PlatformAdapter` interface with `createAdapter(platform, credentials)` factory
   - **Make.com** — Full API integration (multi-zone: us1, eu1, etc.)
   - **n8n** — Self-hosted instance support
-  - **Zapier** — Stub (requires OAuth Partner Program access)
+  - **Zapier** — Webhook-based monitoring (users add a POST webhook to their Zaps; automations auto-discovered from incoming data). Full OAuth integration planned for Partner Program access.
 
 ### Sync Engine
 
@@ -132,7 +133,7 @@ src/
 ├── app/
 │   ├── (auth)/                 # Login, signup, password reset
 │   ├── app/[workspaceSlug]/    # Authenticated workspace routes
-│   ├── api/                    # API routes (diagnostic, sync, billing, etc.)
+│   ├── api/                    # API routes (diagnostic, sync, billing, webhooks)
 │   ├── dashboard/[profileId]/  # Public demo dashboards
 │   └── page.tsx                # Landing page
 ├── components/

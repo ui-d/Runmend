@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { encrypt } from "@/lib/crypto";
 import { createAdapter } from "@/lib/platform-adapters";
@@ -31,7 +32,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Test connection before saving
+    // Zapier uses webhook-based auth (no API key needed)
+    if (platform === "zapier") {
+      const webhookToken = randomBytes(32).toString("hex");
+      const adapter = createAdapter(platform, { authType: "webhook" });
+      const testResult = await adapter.testConnection();
+
+      const { data, error } = await supabase
+        .from("platform_connections")
+        .upsert(
+          {
+            workspace_id: workspaceId,
+            platform,
+            auth_type: "webhook" as const,
+            webhook_token: webhookToken,
+            api_key_encrypted: null,
+            instance_url: null,
+            status: testResult.ok ? "active" : "error",
+            error_message: testResult.error || null,
+          },
+          { onConflict: "workspace_id,platform" }
+        )
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json({ connection: data, testResult });
+    }
+
+    // Make.com / n8n use API key auth
     const adapter = createAdapter(platform, { apiKey, instanceUrl, zone });
     const testResult = await adapter.testConnection();
 
@@ -45,7 +74,7 @@ export async function POST(request: NextRequest) {
         {
           workspace_id: workspaceId,
           platform,
-          auth_type: platform === "zapier" ? "oauth" : "api_key",
+          auth_type: "api_key" as const,
           api_key_encrypted: encryptedApiKey,
           instance_url: instanceUrl || null,
           status: testResult.ok ? "active" : "error",

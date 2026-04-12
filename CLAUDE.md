@@ -34,20 +34,21 @@ npm start        # Production server
 - `src/app/app/` — Authenticated workspace routes with `[workspaceSlug]` dynamic segment
 - `src/app/dashboard/[profileId]/` — Public demo dashboards (no auth)
 - `src/app/api/` — API routes (diagnostic, connections, sync, notifications, schedules, billing)
+- `src/app/api/webhooks/zapier/[token]/` — Zapier webhook receiver (token-authenticated, no user session)
 
 ### Data Layer
 
 - `src/lib/supabase/` — Four Supabase clients: `client.ts` (browser), `server.ts` (SSR), `admin.ts` (service role, bypasses RLS), `middleware.ts` (session refresh)
 - `src/lib/queries/` — Typed data access functions (workspaces, profiles, connections, diagnostics, notifications, schedules, subscriptions). All DB access goes through here.
 - `src/lib/database.types.ts` — Supabase-generated types
-- `supabase/migrations/` — 7 migration files defining all tables with RLS policies
+- `supabase/migrations/` — 8 migration files defining all tables with RLS policies
 
 ### Platform Integration Layer
 
 - `src/lib/platform-adapters/` — `PlatformAdapter` interface with factory function `createAdapter(platform, credentials)`
   - `make.ts` — Full Make.com API (zones: us1, eu1, etc.)
   - `n8n.ts` — Self-hosted n8n instances
-  - `zapier.ts` — Stub (requires OAuth Partner Program)
+  - `zapier.ts` — Webhook-based monitoring (auto-discovers Zaps from incoming webhooks; OAuth mode stubbed for future Partner Program access)
 
 ### Business Logic
 
@@ -89,12 +90,12 @@ All 8 phases are complete:
 - **Phase 1**: Supabase foundation (users, workspaces, workspace_members + RLS + triggers)
 - **Phase 2**: Auth (email/password, Google/GitHub OAuth, protected routes, middleware)
 - **Phase 3**: Workspace + profile CRUD with dashboard UI
-- **Phase 4**: Platform connections (Make.com full adapter, n8n adapter, Zapier stub, AES-256-GCM credential encryption)
+- **Phase 4**: Platform connections (Make.com full adapter, n8n adapter, Zapier webhook-based adapter, AES-256-GCM credential encryption)
 - **Phase 5**: Sync engine (automation ingestion, health calculator, 6-rule issue detector)
 - **Phase 6**: Enhanced AI diagnostics (real data prompts, report persistence, history page)
 - **Phase 7**: Monitoring & notifications (audit schedules, Realtime notifications, notification preferences)
 - **Phase 8**: Stripe billing (4 plans, checkout, portal, webhooks), onboarding wizard, plan limit enforcement, error boundaries
 
-Zapier adapter is stubbed pending OAuth Partner Program access. Stripe requires test/live keys + price IDs in env vars to function. Supabase Edge Function for scheduled sync (`supabase/functions/scheduled-sync/`) is designed but not yet deployed.
+Zapier uses webhook-based monitoring: users add a "Webhooks by Zapier" POST action to their Zaps pointing to `/api/webhooks/zapier/{token}`. Automations are auto-discovered from incoming webhooks. Full OAuth integration is planned for when Zapier Partner Program access is granted. Stripe requires test/live keys + price IDs in env vars to function. Supabase Edge Function for scheduled sync (`supabase/functions/scheduled-sync/`) is designed but not yet deployed.
 
 Supabase project: `hrcctyebejialsbdyyle` (US East). Test user: `test@flowcheck.dev` / `testpass123`.

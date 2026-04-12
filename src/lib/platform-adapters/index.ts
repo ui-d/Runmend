@@ -8,6 +8,7 @@ interface AdapterCredentials {
   accessToken?: string;
   instanceUrl?: string;
   zone?: string;
+  authType?: "webhook" | "oauth";
 }
 
 export function createAdapter(
@@ -23,7 +24,7 @@ export function createAdapter(
       if (!credentials.instanceUrl) throw new Error("Instance URL required for n8n");
       return new N8nAdapter(credentials.apiKey, credentials.instanceUrl);
     case "zapier":
-      return new ZapierAdapter();
+      return new ZapierAdapter({ authType: credentials.authType ?? "webhook" });
   }
 }
 
