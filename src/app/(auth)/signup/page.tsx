@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 
 export const metadata = {
-  title: "Sign up — Runmend",
+  title: "Sign Up",
 };
 
 export default function SignupPage() {

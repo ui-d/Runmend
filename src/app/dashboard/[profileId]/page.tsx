@@ -15,8 +15,8 @@ export function generateMetadata({ params }: DashboardPageProps) {
   if (!profile) return { title: "Not Found" };
 
   return {
-    title: `${profile.name} — Runmend Audit`,
-    description: `Automation health audit for ${profile.name}. Score: ${profile.healthScore}/100.`,
+    title: `${profile.name} Audit`,
+    description: `Automation health audit for ${profile.name}. Health score: ${profile.healthScore}/100. View detected issues and AI recommendations.`,
   };
 }
 

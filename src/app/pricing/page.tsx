@@ -8,7 +8,7 @@ import { PricingCTA } from "@/components/pricing/PricingCTA";
 import { Footer } from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-  title: "Pricing — Runmend",
+  title: "Pricing",
   description:
     "Simple, transparent pricing for automation health monitoring. Start free, upgrade when you need more.",
 };
