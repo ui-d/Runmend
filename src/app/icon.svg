@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <rect width="32" height="32" rx="8" fill="#09090b"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="700" fill="#fafafa">r</text>
-  <text x="22" y="22" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="700" fill="#a1a1aa">m</text>
+  <!-- Stylized "R" letterform — thick strokes for favicon legibility -->
+  <path d="M9 7h10a6 6 0 0 1 0 12h-3l7 6h-5l-6.5-6H13v6H9V7z M13 11v4h5.5a2 2 0 0 0 0-4H13z" fill="#fafafa"/>
 </svg>
