@@ -15,7 +15,7 @@ export function generateMetadata({ params }: DashboardPageProps) {
   if (!profile) return { title: "Not Found" };
 
   return {
-    title: `${profile.name} — FlowCheck Audit`,
+    title: `${profile.name} — Runmend Audit`,
     description: `Automation health audit for ${profile.name}. Score: ${profile.healthScore}/100.`,
   };
 }

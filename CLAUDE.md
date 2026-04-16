@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FlowCheck is an AI-powered automation health monitoring SaaS that audits workflow configurations across Make.com and n8n. It detects silent failures, expired credentials, broken webhooks, and empty field mappings, then generates AI diagnostic reports using Claude API.
+Runmend is an AI-powered automation health monitoring SaaS that audits workflow configurations across Make.com and n8n. It detects silent failures, expired credentials, broken webhooks, and empty field mappings, then generates AI diagnostic reports using Claude API.
 
 The app has two paths: a **public demo** at `/dashboard/[profileId]` (4 hardcoded profiles, no auth) and an **authenticated SaaS** at `/app/[workspaceSlug]/...` (multi-tenant workspaces with real platform connections).
 
@@ -112,7 +112,7 @@ All 8 original phases + production hardening + ship-readiness work complete:
 
 Stripe requires test/live keys + price IDs in env vars. Zapier may be re-added later with Partner Program OAuth access.
 
-Supabase project: `hrcctyebejialsbdyyle` (US East). Test user: `test@flowcheck.dev` / `testpass123`.
+Supabase project: `hrcctyebejialsbdyyle` (US East). Test user: `test@runmend.app` / `testpass123`.
 
 ## Deploy Checklist (Vercel)
 

@@ -27,7 +27,7 @@ export function Sidebar({ workspaceSlug, plan }: SidebarProps) {
     <aside className="w-56 border-r border-border bg-card/50 flex flex-col">
       <div className="p-4 border-b border-border">
         <Link href="/" className="text-lg font-bold tracking-tight">
-          flow<span className="text-muted-foreground">check</span>
+          run<span className="text-muted-foreground">mend</span>
         </Link>
       </div>
       <nav className="flex-1 p-2 space-y-1">

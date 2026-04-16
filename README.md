@@ -1,6 +1,6 @@
-# FlowCheck
+# Runmend
 
-FlowCheck is an AI-powered automation health monitoring SaaS that audits workflow configurations across Zapier, Make.com, and n8n. It detects silent failures, expired credentials, broken webhooks, and empty field mappings, then generates AI diagnostic reports using Claude API.
+Runmend is an AI-powered automation health monitoring SaaS that audits workflow configurations across Zapier, Make.com, and n8n. It detects silent failures, expired credentials, broken webhooks, and empty field mappings, then generates AI diagnostic reports using Claude API.
 
 ## What It Does
 
@@ -42,8 +42,8 @@ The app includes four built-in demo profiles accessible without authentication a
 ### Installation
 
 ```bash
-git clone https://github.com/ui-d/flowcheck.git
-cd flowcheck
+git clone https://github.com/ui-d/runmend.git
+cd runmend
 npm install
 ```
 

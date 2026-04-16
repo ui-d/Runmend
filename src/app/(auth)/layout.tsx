@@ -10,7 +10,7 @@ export default function AuthLayout({
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link href="/" className="text-2xl font-bold tracking-tight">
-            flow<span className="text-muted-foreground">check</span>
+            run<span className="text-muted-foreground">mend</span>
           </Link>
         </div>
         {children}

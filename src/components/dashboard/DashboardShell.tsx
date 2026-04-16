@@ -71,7 +71,7 @@ export function DashboardShell({
         <header className="border-b border-border/50 px-4 py-4">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <span className="text-lg font-bold tracking-tight">
-              flow<span className="text-muted-foreground">check</span>
+              run<span className="text-muted-foreground">mend</span>
             </span>
           </div>
         </header>
@@ -126,7 +126,7 @@ export function DashboardShell({
       {!isAuthenticatedView && (
         <footer className="border-t border-border/50 py-8 mt-12 text-center text-sm text-muted-foreground">
           <p>
-            FlowCheck — Automation health monitoring for Make.com &amp; n8n
+            Runmend — Automation health monitoring for Make.com &amp; n8n
           </p>
         </footer>
       )}

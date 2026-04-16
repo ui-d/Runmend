@@ -7,7 +7,7 @@ const steps = [
     step: "01",
     title: "Connect your platform",
     description:
-      "Link your client's Make.com or n8n instance. FlowCheck reads automations, execution logs, and connection statuses — read-only, nothing is modified.",
+      "Link your client's Make.com or n8n instance. Runmend reads automations, execution logs, and connection statuses — read-only, nothing is modified.",
   },
   {
     icon: Search,
@@ -21,7 +21,7 @@ const steps = [
     step: "03",
     title: "Fix with AI-guided steps",
     description:
-      "For each issue, FlowCheck generates a specific, actionable fix — not generic advice. AI diagnostics explain what broke, why it matters, and exactly how to resolve it.",
+      "For each issue, Runmend generates a specific, actionable fix — not generic advice. AI diagnostics explain what broke, why it matters, and exactly how to resolve it.",
   },
 ];
 

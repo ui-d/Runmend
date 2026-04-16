@@ -20,7 +20,7 @@ export function Hero() {
 
       <p className="mt-6 text-lg text-muted-foreground max-w-2xl leading-relaxed">
         Credentials expire silently. Webhooks stop firing. Fields map to empty
-        strings. FlowCheck monitors all your clients&apos; workflows from one
+        strings. Runmend monitors all your clients&apos; workflows from one
         dashboard — so you catch failures before they do.
       </p>
 

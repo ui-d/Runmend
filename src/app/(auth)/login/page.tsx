@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 
 export const metadata = {
-  title: "Sign in — FlowCheck",
+  title: "Sign in — Runmend",
 };
 
 export default function LoginPage() {
@@ -18,7 +18,7 @@ export default function LoginPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your FlowCheck account</CardDescription>
+        <CardDescription>Sign in to your Runmend account</CardDescription>
       </CardHeader>
       <CardContent>
         <AuthForm mode="login" />
