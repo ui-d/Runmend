@@ -70,7 +70,7 @@ export function DashboardPreview() {
   );
 
   return (
-    <section className="max-w-5xl mx-auto px-4 pb-20 -mt-2">
+    <section className="max-w-5xl mx-auto px-4 pb-20">
       {/* Browser chrome */}
       <div className="rounded-xl border border-border/60 bg-background shadow-2xl shadow-black/5 overflow-hidden">
         {/* Title bar */}

@@ -24,11 +24,11 @@ const stats = [
 export function Stats() {
   return (
     <section className="border-y border-border/50 bg-muted/30">
-      <div className="max-w-5xl mx-auto px-4 py-16">
+      <div className="max-w-5xl mx-auto px-4 py-20">
         <p className="text-center text-sm font-medium text-muted-foreground/70 uppercase tracking-wider mb-10">
           The silent automation crisis
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {stats.map((stat) => (
             <div key={stat.value} className="text-center">
               <stat.icon className="h-5 w-5 mx-auto mb-3 text-muted-foreground/50" />

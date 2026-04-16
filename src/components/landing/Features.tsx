@@ -63,7 +63,7 @@ export function Features() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {features.map((feature) => (
             <div key={feature.title} className="space-y-2">
               <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-muted mb-3">

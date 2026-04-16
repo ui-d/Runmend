@@ -15,7 +15,7 @@ export function ProfileCard({ profile }: ProfileCardProps) {
   return (
     <Link href={`/dashboard/${profile.id}`}>
       <Card className="group relative overflow-hidden transition-all duration-300 hover:border-foreground/20 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/20 h-full">
-        <CardContent className="p-6 flex flex-col h-full">
+        <CardContent className="p-5 flex flex-col h-full">
           <div className="flex items-start justify-between mb-4">
             <Badge
               variant="outline"
@@ -33,20 +33,20 @@ export function ProfileCard({ profile }: ProfileCardProps) {
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold mb-1">{profile.name}</h3>
-          <p className="text-sm text-muted-foreground mb-4">
+          <h3 className="text-base font-semibold mb-1">{profile.name}</h3>
+          <p className="text-xs text-muted-foreground mb-3">
             {profile.industry}
           </p>
 
-          <p className="text-sm text-muted-foreground/80 mb-6 flex-1">
+          <p className="text-xs text-muted-foreground/80 leading-relaxed mb-6 flex-1 line-clamp-3">
             {profile.description}
           </p>
 
-          <div className="flex items-center justify-between pt-4 border-t border-border/50">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between pt-3 border-t border-border/50">
+            <span className="text-xs text-muted-foreground">
               {profile.scenarioCount} automations
             </span>
-            <span className="inline-flex items-center gap-1 text-sm font-medium group-hover:gap-2 transition-all">
+            <span className="inline-flex items-center gap-1 text-xs font-medium group-hover:gap-2 transition-all">
               Run audit
               <ArrowRight className="h-4 w-4" />
             </span>
