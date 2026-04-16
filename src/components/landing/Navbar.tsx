@@ -47,15 +47,18 @@ export async function Navbar() {
         </Link>
 
         <div className="hidden sm:flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="#how-it-works" className="hover:text-foreground transition-colors">
+          <Link href="/#how-it-works" className="hover:text-foreground transition-colors">
             How it works
-          </a>
-          <a href="#features" className="hover:text-foreground transition-colors">
+          </Link>
+          <Link href="/#features" className="hover:text-foreground transition-colors">
             Features
-          </a>
-          <a href="#demo" className="hover:text-foreground transition-colors">
+          </Link>
+          <Link href="/pricing" className="hover:text-foreground transition-colors">
+            Pricing
+          </Link>
+          <Link href="/#demo" className="hover:text-foreground transition-colors">
             Demo
-          </a>
+          </Link>
         </div>
 
         {user ? (

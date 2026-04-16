@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-export function CTA() {
+export function PricingCTA() {
   return (
     <section className="max-w-5xl mx-auto px-4 py-20">
       <div className="text-center rounded-2xl border border-border/50 bg-muted/30 px-6 py-16">
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Stop firefighting. Start monitoring.
+          Ready to stop firefighting?
         </h2>
         <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-          Connect your client&apos;s Make.com or n8n instance and get your
-          first health report in under 2 minutes.
+          Start monitoring your automations for free. Connect your first
+          Make.com or n8n instance in under 2 minutes.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
           <Link
@@ -20,21 +20,15 @@ export function CTA() {
             Get started free
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
-          <a
-            href="#demo"
+          <Link
+            href="/#demo"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium h-10 px-6 hover:bg-accent hover:text-accent-foreground transition-colors"
           >
-            Try the demo
-          </a>
+            See the demo
+          </Link>
         </div>
         <p className="mt-4 text-xs text-muted-foreground/50">
-          Free plan available. No credit card required.{" "}
-          <Link
-            href="/pricing"
-            className="text-muted-foreground/70 hover:text-muted-foreground underline underline-offset-2 transition-colors"
-          >
-            See pricing
-          </Link>
+          No credit card required.
         </p>
       </div>
     </section>
