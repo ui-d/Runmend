@@ -13,6 +13,7 @@ export async function getWorkspaceProfiles(
     .from("automation_profiles")
     .select("*, automation_issues(id, severity)")
     .eq("workspace_id", workspaceId)
+    .eq("automation_issues.status", "open")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -26,6 +27,7 @@ export async function getProfileById(supabase: Client, profileId: string) {
     .from("automation_profiles")
     .select("*, automation_issues(*)")
     .eq("id", profileId)
+    .eq("automation_issues.status", "open")
     .single();
 
   if (error && error.code !== "PGRST116") throw error;

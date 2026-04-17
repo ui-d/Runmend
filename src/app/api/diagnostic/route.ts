@@ -140,6 +140,7 @@ async function handleDbDiagnostic(profileId: string) {
     .from("automation_profiles")
     .select("*, automation_issues(*)")
     .eq("id", profileId)
+    .eq("automation_issues.status", "open")
     .single();
 
   if (!profile) {

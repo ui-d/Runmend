@@ -216,36 +216,69 @@ async function syncIssues(
   profileId: string,
   detected: DetectedIssue[]
 ): Promise<void> {
-  // Resolve all existing open issues that weren't re-detected
+  // Load ALL prior issues (not just open) so we can reopen resolved ones
+  // instead of inserting duplicates when the same issue reappears.
   const { data: existing } = await admin
     .from("automation_issues")
-    .select("id, name, automation_name")
-    .eq("profile_id", profileId)
-    .eq("status", "open");
+    .select("id, name, automation_name, status")
+    .eq("profile_id", profileId);
 
   const detectedKeys = new Set(
     detected.map((d) => `${d.name}::${d.automationName}`)
   );
 
-  // Batch resolve: collect IDs of issues no longer detected
-  const idsToResolve = (existing ?? [])
-    .filter((ex) => !detectedKeys.has(`${ex.name}::${ex.automation_name}`))
-    .map((ex) => ex.id);
+  // Group existing rows by issue key. If duplicates exist in the DB
+  // (from an earlier bug), we'll reopen the newest and resolve the rest.
+  const existingByKey = new Map<string, { id: string; status: string }[]>();
+  for (const row of existing ?? []) {
+    const key = `${row.name}::${row.automation_name}`;
+    const list = existingByKey.get(key) ?? [];
+    list.push({ id: row.id, status: row.status });
+    existingByKey.set(key, list);
+  }
+
+  const now = new Date().toISOString();
+  const idsToResolve: string[] = [];
+  const idsToReopen: string[] = [];
+
+  // For every existing issue: if no longer detected, mark open ones resolved.
+  // If still detected, keep exactly one row open and resolve accidental duplicates.
+  existingByKey.forEach((rows, key) => {
+    if (!detectedKeys.has(key)) {
+      for (const r of rows) {
+        if (r.status === "open") idsToResolve.push(r.id);
+      }
+      return;
+    }
+
+    // Still detected — prefer an already-open row, else reopen one resolved row.
+    const openRows = rows.filter((r: { id: string; status: string }) => r.status === "open");
+    if (openRows.length > 0) {
+      // Keep first open, resolve extra duplicates.
+      for (let i = 1; i < openRows.length; i++) idsToResolve.push(openRows[i].id);
+    } else {
+      // Reopen a single resolved row.
+      idsToReopen.push(rows[0].id);
+    }
+  });
 
   if (idsToResolve.length > 0) {
     await admin
       .from("automation_issues")
-      .update({ status: "resolved", resolved_at: new Date().toISOString() })
+      .update({ status: "resolved", resolved_at: now })
       .in("id", idsToResolve);
   }
 
-  // Batch insert: collect new issues not already open
-  const existingKeys = new Set(
-    (existing ?? []).map((e) => `${e.name}::${e.automation_name}`)
-  );
+  if (idsToReopen.length > 0) {
+    await admin
+      .from("automation_issues")
+      .update({ status: "open", resolved_at: null })
+      .in("id", idsToReopen);
+  }
 
+  // Insert only issues that have no prior row at all.
   const newIssues = detected
-    .filter((issue) => !existingKeys.has(`${issue.name}::${issue.automationName}`))
+    .filter((issue) => !existingByKey.has(`${issue.name}::${issue.automationName}`))
     .map((issue) => ({
       profile_id: profileId,
       severity: issue.severity,
