@@ -11,6 +11,7 @@ export interface AutomationIssue {
   automationName: string;
   businessImpact: string;
   recommendation: string;
+  scenarioUrl?: string;
 }
 
 export interface AutomationProfile {

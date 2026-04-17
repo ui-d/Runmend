@@ -103,9 +103,11 @@ Current Open Issues (${openIssues.length}):
 ${issuesList || "No open issues."}
 
 Provide your analysis as a JSON object with exactly 3 fields:
-- "overallHealth": One paragraph assessing the overall state of this automation stack, referencing specific automations and data
-- "mostDangerousIssue": One paragraph identifying the single most dangerous issue and why it demands immediate attention
-- "recommendations": One paragraph with three prioritized recommendations ranked by urgency (most urgent first)
+- "overallHealth": ONE short sentence (max 25 words) summarizing the state of the stack. No preamble, no disclaimers — a scannable headline.
+- "mostDangerousIssue": 2-3 tight sentences naming the single most dangerous issue (reference the specific automation by name) and the concrete business impact. Lead with the impact.
+- "recommendations": 3 to 5 short imperative sentences, each a standalone action, each starting with a capitalized verb (e.g. "Audit…", "Verify…", "Disable…") and ending with a period. Do NOT number, bullet, or prefix them — just sentences separated by a single space. Most urgent first.
+
+Keep language plain and operational. No marketing tone.
 
 Respond with ONLY the JSON object, no other text.`;
 }

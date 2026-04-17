@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AutomationProfile } from "@/lib/types";
+import { AutomationProfile, getHealthStatus } from "@/lib/types";
 import { useDiagnostic } from "@/hooks/useDiagnostic";
 import { useSync } from "@/hooks/useSync";
 import { ProfileHeader } from "./ProfileHeader";
@@ -109,18 +109,22 @@ export function DashboardShell({
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <HealthScore score={profile.healthScore} />
-          <DiagnosticNarrative
-            narrative={narrative}
-            isLoading={isLoading}
-            error={error}
-            onRetry={retry}
-            historyUrl={diagnosticsHistoryUrl}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <div className="space-y-6 min-w-0">
+            <HealthScore score={profile.healthScore} />
+            <IssuesList issues={profile.issues} />
+          </div>
+          <div className="min-w-0 lg:sticky lg:top-6">
+            <DiagnosticNarrative
+              narrative={narrative}
+              isLoading={isLoading}
+              error={error}
+              onRetry={retry}
+              historyUrl={diagnosticsHistoryUrl}
+              healthStatus={getHealthStatus(profile.healthScore)}
+            />
+          </div>
         </div>
-
-        <IssuesList issues={profile.issues} />
       </main>
 
       {!isAuthenticatedView && (
