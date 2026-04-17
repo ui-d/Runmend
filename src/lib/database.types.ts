@@ -207,6 +207,8 @@ export type Database = {
           token_expires_at: string | null;
           api_key_encrypted: string | null;
           instance_url: string | null;
+          zone: string | null;
+          team_id: number | null;
           webhook_token: string | null;
           webhook_token_hash: string | null;
           status: "pending" | "active" | "expired" | "revoked" | "error";
@@ -226,6 +228,8 @@ export type Database = {
           token_expires_at?: string | null;
           api_key_encrypted?: string | null;
           instance_url?: string | null;
+          zone?: string | null;
+          team_id?: number | null;
           webhook_token?: string | null;
           webhook_token_hash?: string | null;
           status?: "pending" | "active" | "expired" | "revoked" | "error";
@@ -243,6 +247,8 @@ export type Database = {
           token_expires_at?: string | null;
           api_key_encrypted?: string | null;
           instance_url?: string | null;
+          zone?: string | null;
+          team_id?: number | null;
           webhook_token?: string | null;
           webhook_token_hash?: string | null;
           status?: "pending" | "active" | "expired" | "revoked" | "error";

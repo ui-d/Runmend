@@ -101,7 +101,7 @@ See `.env.example`. Required for full functionality:
 - `CRON_SECRET` — Vercel Cron authentication (`openssl rand -hex 32`)
 - `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` — Sentry error tracking (optional)
 - `RESEND_API_KEY` — Email notifications (optional)
-- `CLAUDE_MODEL` — Claude model for diagnostics (optional; defaults to `claude-sonnet-4-6-20250514`)
+- `CLAUDE_MODEL` — Claude model for diagnostics (optional; defaults to `claude-sonnet-4-5-20250929`)
 
 ## Current State
 

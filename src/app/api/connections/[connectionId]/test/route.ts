@@ -41,17 +41,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
       {
         apiKey,
         instanceUrl: connection.instance_url || undefined,
+        zone: connection.zone || undefined,
+        teamId: connection.team_id || undefined,
       }
     );
 
     const result = await adapter.testConnection();
+    const teamId = result.metadata?.teamId as number | null ?? null;
 
-    // Update status
+    // Update status and team_id
     await supabase
       .from("platform_connections")
       .update({
         status: result.ok ? "active" : "error",
         error_message: result.error || null,
+        ...(teamId ? { team_id: teamId } : {}),
       })
       .eq("id", connectionId);
 

@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
 
     // Encrypt credentials
     const encryptedApiKey = apiKey ? encrypt(apiKey) : null;
+    const teamId = testResult.metadata?.teamId as number | null ?? null;
 
     // Upsert connection
     const { data, error } = await supabase
@@ -50,6 +51,8 @@ export async function POST(request: NextRequest) {
           auth_type: "api_key" as const,
           api_key_encrypted: encryptedApiKey,
           instance_url: instanceUrl || null,
+          zone: zone || null,
+          team_id: teamId,
           status: testResult.ok ? "active" : "error",
           error_message: testResult.error || null,
         },

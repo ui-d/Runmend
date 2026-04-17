@@ -7,6 +7,7 @@ interface AdapterCredentials {
   accessToken?: string;
   instanceUrl?: string;
   zone?: string;
+  teamId?: number;
 }
 
 export function createAdapter(
@@ -16,7 +17,7 @@ export function createAdapter(
   switch (platform) {
     case "make":
       if (!credentials.apiKey) throw new Error("API key required for Make.com");
-      return new MakeAdapter(credentials.apiKey, credentials.zone);
+      return new MakeAdapter(credentials.apiKey, credentials.zone, credentials.teamId);
     case "n8n":
       if (!credentials.apiKey) throw new Error("API key required for n8n");
       if (!credentials.instanceUrl) throw new Error("Instance URL required for n8n");

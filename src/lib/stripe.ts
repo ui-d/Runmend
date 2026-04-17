@@ -22,7 +22,7 @@ export const stripe = {
 } as unknown as Stripe;
 
 export const PLAN_LIMITS = {
-  free: { profiles: 1, syncsPerDay: 1, diagnosticsPerMonth: 3 },
+  free: { profiles: 1, syncsPerDay: 5, diagnosticsPerMonth: 3 },
   starter: { profiles: 5, syncsPerDay: 4, diagnosticsPerMonth: 20 },
   pro: { profiles: 25, syncsPerDay: 24, diagnosticsPerMonth: -1 },
   enterprise: { profiles: -1, syncsPerDay: -1, diagnosticsPerMonth: -1 },

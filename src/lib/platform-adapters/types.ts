@@ -15,8 +15,14 @@ export interface NormalizedExecution {
   errorMessage: string | null;
 }
 
+export interface ConnectionTestResult {
+  ok: boolean;
+  error?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface PlatformAdapter {
-  testConnection(): Promise<{ ok: boolean; error?: string }>;
+  testConnection(): Promise<ConnectionTestResult>;
   fetchAutomations(): Promise<NormalizedAutomation[]>;
   fetchExecutionLogs(since: Date): Promise<NormalizedExecution[]>;
 }

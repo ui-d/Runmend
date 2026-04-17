@@ -154,6 +154,36 @@ async function handleDbDiagnostic(profileId: string) {
     );
   }
 
+  // Return cached report if it exists and is newer than the last sync
+  const admin = createAdminClient();
+  const { data: cachedReport } = await admin
+    .from("diagnostic_reports")
+    .select("overall_health, most_dangerous, recommendations, created_at")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (cachedReport) {
+    const reportAge = Date.now() - new Date(cachedReport.created_at).getTime();
+    const lastAudit = profile.last_audit_at
+      ? new Date(profile.last_audit_at).getTime()
+      : 0;
+    const reportTime = new Date(cachedReport.created_at).getTime();
+
+    // Use cache if report is less than 1 hour old AND generated after last sync
+    if (reportAge < 60 * 60 * 1000 && reportTime >= lastAudit) {
+      return NextResponse.json({
+        narrative: {
+          overallHealth: cachedReport.overall_health,
+          mostDangerousIssue: cachedReport.most_dangerous,
+          recommendations: cachedReport.recommendations,
+        },
+        cached: true,
+      });
+    }
+  }
+
   // Fetch automations and execution logs for enhanced prompt
   const { data: automations } = await supabase
     .from("automations")
@@ -185,14 +215,13 @@ async function handleDbDiagnostic(profileId: string) {
   try {
     const narrative = await result.clone().json();
     if (narrative.narrative) {
-      const admin = createAdminClient();
       await admin.from("diagnostic_reports").insert({
         profile_id: profileId,
         triggered_by: "manual",
         overall_health: narrative.narrative.overallHealth,
         most_dangerous: narrative.narrative.mostDangerousIssue,
         recommendations: narrative.narrative.recommendations,
-        model_used: process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6-20250514",
+        model_used: process.env.CLAUDE_MODEL ?? "claude-sonnet-4-5-20250929",
         tokens_used: null,
       });
     }
@@ -211,10 +240,10 @@ async function callClaude(
   const client = new Anthropic({ apiKey });
 
   const message = await client.messages.create({
-    model: process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6-20250514",
+    model: process.env.CLAUDE_MODEL ?? "claude-sonnet-4-5-20250929",
     max_tokens: 1024,
     system:
-      "You are an automation health diagnostic AI. You analyze automation platform configurations and provide clear, actionable business-focused assessments. Write in a direct, professional tone. Do not use markdown formatting. Do not use bullet points or numbered lists — write in flowing paragraphs.",
+      "You are an automation health diagnostic AI. You analyze automation platform configurations and provide clear, actionable business-focused assessments. Write in a direct, professional tone. Respond with ONLY a valid JSON object — no markdown fences, no extra text.",
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -223,8 +252,14 @@ async function callClaude(
     throw new Error("No text response from Claude");
   }
 
+  // Strip markdown code fences if present
+  const raw = textContent.text
+    .replace(/^```(?:json)?\s*/m, "")
+    .replace(/\s*```\s*$/m, "")
+    .trim();
+
   try {
-    const narrative: DiagnosticNarrative = JSON.parse(textContent.text);
+    const narrative: DiagnosticNarrative = JSON.parse(raw);
     return NextResponse.json({ narrative });
   } catch {
     const fallback = fallbackNarratives[profileId];

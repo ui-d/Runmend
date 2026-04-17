@@ -56,6 +56,8 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
     {
       apiKey,
       instanceUrl: connection.instance_url || undefined,
+      zone: connection.zone || undefined,
+      teamId: connection.team_id || undefined,
     }
   );
 

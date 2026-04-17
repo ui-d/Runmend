@@ -1,5 +1,6 @@
 import type {
   PlatformAdapter,
+  ConnectionTestResult,
   NormalizedAutomation,
   NormalizedExecution,
 } from "./types";
@@ -8,16 +9,18 @@ import { fetchWithRetry } from "./retry";
 export class MakeAdapter implements PlatformAdapter {
   private baseUrl: string;
   private headers: Record<string, string>;
+  private teamId: number | null;
 
-  constructor(apiToken: string, zone: string = "us1") {
+  constructor(apiToken: string, zone: string = "us1", teamId?: number) {
     this.baseUrl = `https://${zone}.make.com/api/v2`;
     this.headers = {
       Authorization: `Token ${apiToken}`,
       "Content-Type": "application/json",
     };
+    this.teamId = teamId ?? null;
   }
 
-  async testConnection(): Promise<{ ok: boolean; error?: string }> {
+  async testConnection(): Promise<ConnectionTestResult> {
     try {
       const res = await fetchWithRetry(`${this.baseUrl}/users/me`, {
         headers: this.headers,
@@ -26,7 +29,23 @@ export class MakeAdapter implements PlatformAdapter {
         const body = await res.text();
         return { ok: false, error: `Make.com API error: ${res.status} ${body}` };
       }
-      return { ok: true };
+      const userData = await res.json();
+
+      // Discover organizationId for listing scenarios
+      let teamId: number | null = null;
+      const orgsRes = await fetchWithRetry(`${this.baseUrl}/organizations`, {
+        headers: this.headers,
+      });
+      if (orgsRes.ok) {
+        const orgsData = await orgsRes.json();
+        const orgs = orgsData.organizations ?? orgsData ?? [];
+        if (Array.isArray(orgs) && orgs.length > 0) {
+          teamId = orgs[0].id;
+        }
+      }
+
+      if (teamId) this.teamId = teamId;
+      return { ok: true, metadata: { teamId } };
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Connection failed";
@@ -34,15 +53,32 @@ export class MakeAdapter implements PlatformAdapter {
     }
   }
 
+  private async resolveOrgId(): Promise<number | null> {
+    if (this.teamId) return this.teamId;
+    const res = await fetchWithRetry(`${this.baseUrl}/organizations`, {
+      headers: this.headers,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const orgs = data.organizations ?? data ?? [];
+      if (Array.isArray(orgs) && orgs.length > 0) {
+        this.teamId = orgs[0].id;
+      }
+    }
+    return this.teamId;
+  }
+
   async fetchAutomations(): Promise<NormalizedAutomation[]> {
+    const orgId = await this.resolveOrgId();
     const allScenarios: NormalizedAutomation[] = [];
     const pageSize = 500;
     const maxPages = 10;
 
     for (let page = 0; page < maxPages; page++) {
       const offset = page * pageSize;
+      const orgParam = orgId ? `&organizationId=${orgId}` : "";
       const res = await fetchWithRetry(
-        `${this.baseUrl}/scenarios?pg[limit]=${pageSize}&pg[offset]=${offset}`,
+        `${this.baseUrl}/scenarios?pg[limit]=${pageSize}&pg[offset]=${offset}${orgParam}`,
         { headers: this.headers }
       );
 
@@ -57,7 +93,7 @@ export class MakeAdapter implements PlatformAdapter {
         (s: Record<string, unknown>): NormalizedAutomation => ({
           externalId: String(s.id),
           name: String(s.name || "Unnamed Scenario"),
-          status: s.islinked ? "active" : "inactive",
+          status: s.isActive ?? s.islinked ? "active" : "inactive",
           triggerType: null,
           lastRunAt: s.lastEdit ? String(s.lastEdit) : null,
         })

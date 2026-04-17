@@ -63,6 +63,8 @@ function makeConnection(
     token_expires_at: null,
     api_key_encrypted: "encrypted-key",
     instance_url: null,
+    zone: null,
+    team_id: null,
     webhook_token: null,
     webhook_token_hash: null,
     status: "active",
