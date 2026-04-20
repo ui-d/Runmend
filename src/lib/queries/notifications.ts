@@ -1,8 +1,55 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import type { NotificationConfig, NotificationChannel } from "@/lib/notifications/config";
 
 type Client = SupabaseClient<Database>;
 type NotificationRow = Database["public"]["Tables"]["notifications"]["Row"];
+type PreferenceRow = Database["public"]["Tables"]["notification_preferences"]["Row"];
+
+export interface ChannelPreference {
+  channel: NotificationChannel;
+  is_enabled: boolean;
+  config: NotificationConfig;
+}
+
+export async function getNotificationPreferences(
+  supabase: Client,
+  userId: string,
+  workspaceId: string
+): Promise<PreferenceRow[]> {
+  const { data, error } = await supabase
+    .from("notification_preferences")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function upsertNotificationPreference(
+  supabase: Client,
+  input: {
+    userId: string;
+    workspaceId: string;
+    channel: NotificationChannel;
+    is_enabled: boolean;
+    config: NotificationConfig;
+  }
+): Promise<void> {
+  const { error } = await supabase.from("notification_preferences").upsert(
+    {
+      user_id: input.userId,
+      workspace_id: input.workspaceId,
+      channel: input.channel,
+      is_enabled: input.is_enabled,
+      config: input.config as unknown as Database["public"]["Tables"]["notification_preferences"]["Insert"]["config"],
+    },
+    { onConflict: "user_id,workspace_id,channel" }
+  );
+
+  if (error) throw error;
+}
 
 export async function getUserNotifications(
   supabase: Client,

@@ -50,3 +50,52 @@ export async function createWorkspace(
   if (memberError) throw memberError;
   return workspace;
 }
+
+export async function updateWorkspaceName(
+  supabase: Client,
+  workspaceId: string,
+  name: string
+) {
+  const { error } = await supabase
+    .from("workspaces")
+    .update({ name, updated_at: new Date().toISOString() })
+    .eq("id", workspaceId);
+
+  if (error) throw error;
+}
+
+export interface WorkspaceMember {
+  user_id: string;
+  role: string;
+  created_at: string;
+  email: string;
+  full_name: string | null;
+}
+
+export async function getWorkspaceMembers(
+  supabase: Client,
+  workspaceId: string
+): Promise<WorkspaceMember[]> {
+  const { data, error } = await supabase
+    .from("workspace_members")
+    .select("user_id, role, created_at, users!inner(email, full_name)")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  type Row = {
+    user_id: string;
+    role: string;
+    created_at: string;
+    users: { email: string; full_name: string | null };
+  };
+
+  return (data as unknown as Row[]).map((row) => ({
+    user_id: row.user_id,
+    role: row.role,
+    created_at: row.created_at,
+    email: row.users.email,
+    full_name: row.users.full_name,
+  }));
+}

@@ -119,6 +119,69 @@ export const dismissIssuesSchema = z.object({
 
 export type DismissIssuesInput = z.infer<typeof dismissIssuesSchema>;
 
+// --- Notification preferences ---
+
+const severityEnum = z.enum(["critical", "warning", "info"]);
+const eventTypeEnum = z.enum([
+  "issue_detected",
+  "credential_expiring",
+  "audit_complete",
+  "connection_error",
+]);
+const channelEnum = z.enum(["in_app", "email", "slack", "webhook"]);
+const timeStringRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const notificationConfigSchema = z.object({
+  severities: z.array(severityEnum),
+  event_types: z.array(eventTypeEnum),
+  muted_profile_ids: z.array(z.string().uuid()),
+  quiet_hours: z
+    .object({
+      enabled: z.boolean(),
+      start: z.string().regex(timeStringRegex, "Time must be HH:MM"),
+      end: z.string().regex(timeStringRegex, "Time must be HH:MM"),
+      timezone: z.string().min(1),
+    })
+    .nullable(),
+  digest: z
+    .object({
+      enabled: z.boolean(),
+      schedule: z.enum(["daily", "weekly"]),
+    })
+    .nullable(),
+});
+
+export const notificationPreferenceUpdateSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID"),
+  channel: channelEnum,
+  is_enabled: z.boolean(),
+  config: notificationConfigSchema,
+});
+
+export type NotificationPreferenceUpdate = z.infer<
+  typeof notificationPreferenceUpdateSchema
+>;
+
+// --- Workspace update ---
+
+export const workspaceNameUpdateSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(60, "Name must be 60 characters or fewer"),
+});
+
+// --- Account update ---
+
+export const accountUpdateSchema = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .max(80, "Full name must be 80 characters or fewer"),
+});
+
 // --- Helper to format Zod errors ---
 
 export function formatZodErrors(error: z.ZodError): string {
