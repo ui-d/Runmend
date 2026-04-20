@@ -1,4 +1,7 @@
 import Stripe from "stripe";
+import type { Database } from "@/lib/database.types";
+
+type SubscriptionRow = Database["public"]["Tables"]["subscriptions"]["Row"];
 
 let _stripe: Stripe | null = null;
 
@@ -22,7 +25,7 @@ export const stripe = {
 } as unknown as Stripe;
 
 export const PLAN_LIMITS = {
-  free: { profiles: 1, syncsPerDay: 5, diagnosticsPerMonth: 3 },
+  free: { profiles: 1, syncsPerDay: 1, diagnosticsPerMonth: 3 },
   starter: { profiles: 5, syncsPerDay: 4, diagnosticsPerMonth: 20 },
   pro: { profiles: 25, syncsPerDay: 24, diagnosticsPerMonth: -1 },
   enterprise: { profiles: -1, syncsPerDay: -1, diagnosticsPerMonth: -1 },
@@ -47,6 +50,20 @@ export const STRIPE_PRICE_IDS: Record<string, string> = {
   starter: process.env.STRIPE_PRICE_STARTER ?? "",
   pro: process.env.STRIPE_PRICE_PRO ?? "",
 };
+
+export const STRIPE_PRICE_LTD: string = process.env.STRIPE_PRICE_LTD ?? "";
+
+/**
+ * Effective plan for the purpose of limit enforcement and UI.
+ * LTD holders are always treated as Pro, regardless of the `plan` column.
+ */
+export function resolveEffectivePlan(
+  subscription: Pick<SubscriptionRow, "plan" | "is_ltd"> | null | undefined
+): PlanId {
+  if (subscription?.is_ltd) return "pro";
+  const raw = subscription?.plan ?? "free";
+  return (PLAN_LABELS[raw as PlanId] ? (raw as PlanId) : "free");
+}
 
 export function checkPlanLimit(
   plan: string,

@@ -385,6 +385,27 @@ export type Database = {
           },
         ]
       }
+      ltd_allocations: {
+        Row: {
+          id: number
+          seats_sold: number
+          total_seats: number
+          updated_at: string
+        }
+        Insert: {
+          id: number
+          seats_sold?: number
+          total_seats?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          seats_sold?: number
+          total_seats?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           channel: string
@@ -606,38 +627,56 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_country: string | null
+          billing_email: string | null
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
           id: string
+          is_ltd: boolean
+          ltd_purchased_at: string | null
           plan: string
           status: string
           stripe_customer_id: string
           stripe_subscription_id: string | null
+          tax_id: string | null
+          tax_id_country: string | null
           updated_at: string
           workspace_id: string
         }
         Insert: {
+          billing_country?: string | null
+          billing_email?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          is_ltd?: boolean
+          ltd_purchased_at?: string | null
           plan?: string
           status?: string
           stripe_customer_id: string
           stripe_subscription_id?: string | null
+          tax_id?: string | null
+          tax_id_country?: string | null
           updated_at?: string
           workspace_id: string
         }
         Update: {
+          billing_country?: string | null
+          billing_email?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          is_ltd?: boolean
+          ltd_purchased_at?: string | null
           plan?: string
           status?: string
           stripe_customer_id?: string
           stripe_subscription_id?: string | null
+          tax_id?: string | null
+          tax_id_country?: string | null
           updated_at?: string
           workspace_id?: string
         }
@@ -754,6 +793,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_ltd_seat: { Args: never; Returns: number }
       get_user_admin_workspace_ids: { Args: never; Returns: string[] }
       get_user_workspace_ids: { Args: never; Returns: string[] }
       runmend_trigger_sync: { Args: never; Returns: number }

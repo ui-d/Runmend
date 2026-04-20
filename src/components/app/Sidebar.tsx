@@ -9,6 +9,7 @@ import { PlanUsageBadge } from "./PlanUsageBadge";
 interface SidebarProps {
   workspaceSlug: string;
   plan?: string;
+  isLtd?: boolean;
   profileCount?: number;
 }
 
@@ -20,7 +21,7 @@ const navItems = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar({ workspaceSlug, plan, profileCount = 0 }: SidebarProps) {
+export function Sidebar({ workspaceSlug, plan, isLtd = false, profileCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const basePath = `/app/${workspaceSlug}`;
 
@@ -60,6 +61,7 @@ export function Sidebar({ workspaceSlug, plan, profileCount = 0 }: SidebarProps)
         <div className="p-4 border-t border-border">
           <PlanUsageBadge
             plan={plan}
+            isLtd={isLtd}
             profileCount={profileCount}
             workspaceSlug={workspaceSlug}
           />

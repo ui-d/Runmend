@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
+      tax_id_collection: { enabled: true },
+      billing_address_collection: "required",
       success_url: `${request.headers.get("origin")}/app?billing=success`,
       cancel_url: `${request.headers.get("origin")}/app?billing=canceled`,
       metadata: { workspace_id: workspaceId },

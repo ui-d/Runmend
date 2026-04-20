@@ -38,6 +38,73 @@ export async function POST(request: NextRequest) {
         typeof session.customer === "string"
           ? session.customer
           : session.customer?.id;
+
+      // LTD branch: one-time payment with ltd metadata flag. Handled
+      // separately because mode=payment has no subscription object and
+      // needs an atomic seat reservation.
+      if (
+        session.mode === "payment" &&
+        session.metadata?.ltd === "true" &&
+        workspaceId &&
+        customerId
+      ) {
+        const { data: seatsSold, error: claimError } = await admin.rpc(
+          "claim_ltd_seat"
+        );
+
+        if (claimError || seatsSold == null) {
+          // Sold out or failed to reserve — refund to keep trust intact.
+          const paymentIntentId =
+            typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : session.payment_intent?.id;
+          if (paymentIntentId) {
+            try {
+              await stripe.refunds.create({
+                payment_intent: paymentIntentId,
+                reason: "requested_by_customer",
+              });
+            } catch (refundErr) {
+              console.error("LTD oversold refund failed", refundErr);
+            }
+          }
+          return NextResponse.json({ received: true, ltd: "oversold" });
+        }
+
+        await admin.from("subscriptions").upsert(
+          {
+            workspace_id: workspaceId,
+            stripe_customer_id: customerId,
+            plan: "free",
+            status: "active",
+            is_ltd: true,
+            ltd_purchased_at: new Date().toISOString(),
+            billing_email: session.customer_details?.email ?? null,
+            billing_country:
+              session.customer_details?.address?.country ?? null,
+          },
+          { onConflict: "workspace_id" }
+        );
+
+        // Mirror any tax ID the buyer entered at checkout so the billing page
+        // can show it on day-one without waiting for customer.updated.
+        const taxIds = session.customer_details?.tax_ids;
+        if (taxIds && taxIds.length > 0) {
+          const primary = taxIds[0];
+          await admin
+            .from("subscriptions")
+            .update({
+              tax_id: primary.value ?? null,
+              tax_id_country:
+                session.customer_details?.address?.country ?? null,
+            })
+            .eq("workspace_id", workspaceId);
+        }
+
+        return NextResponse.json({ received: true, ltd: "claimed" });
+      }
+
+      // Subscription branch (existing behaviour).
       const subscriptionId =
         typeof session.subscription === "string"
           ? session.subscription
@@ -48,7 +115,6 @@ export async function POST(request: NextRequest) {
         const priceId = sub.items.data[0]?.price?.id;
         const plan = getPlanFromPriceId(priceId);
 
-        // Get period from first item
         const item = sub.items.data[0];
         const periodStart = item?.current_period_start
           ? new Date(item.current_period_start * 1000).toISOString()
@@ -68,6 +134,9 @@ export async function POST(request: NextRequest) {
               status: "active",
               current_period_start: periodStart,
               current_period_end: periodEnd,
+              billing_email: session.customer_details?.email ?? null,
+              billing_country:
+                session.customer_details?.address?.country ?? null,
             },
             { onConflict: "workspace_id" }
           );
@@ -123,6 +192,30 @@ export async function POST(request: NextRequest) {
       break;
     }
 
+    case "customer.updated": {
+      // Mirror tax ID and billing country so the billing page can show them
+      // without calling Stripe on every render. Stripe remains source-of-truth.
+      const customer = event.data.object as Stripe.Customer;
+      try {
+        const taxIds = await stripe.customers.listTaxIds(customer.id, {
+          limit: 1,
+        });
+        const primary = taxIds.data[0];
+        await admin
+          .from("subscriptions")
+          .update({
+            tax_id: primary?.value ?? null,
+            tax_id_country: primary?.country ?? customer.address?.country ?? null,
+            billing_country: customer.address?.country ?? null,
+            billing_email: customer.email ?? null,
+          })
+          .eq("stripe_customer_id", customer.id);
+      } catch (err) {
+        console.error("customer.updated tax mirror failed", err);
+      }
+      break;
+    }
+
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId =
@@ -149,5 +242,5 @@ function getPlanFromPriceId(priceId: string | undefined): string {
   const proPrice = process.env.STRIPE_PRICE_PRO ?? "";
   if (priceId === starterPrice) return "starter";
   if (priceId === proPrice) return "pro";
-  return "starter";
+  return "free";
 }

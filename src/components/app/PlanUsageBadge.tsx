@@ -4,6 +4,7 @@ import { PLAN_LABELS, PLAN_LIMITS, type PlanId } from "@/lib/stripe";
 
 interface PlanUsageBadgeProps {
   plan: string;
+  isLtd?: boolean;
   profileCount: number;
   workspaceSlug: string;
 }
@@ -11,12 +12,12 @@ interface PlanUsageBadgeProps {
 const RING_SIZE = 28;
 const RING_STROKE = 3;
 
-export function PlanUsageBadge({ plan, profileCount, workspaceSlug }: PlanUsageBadgeProps) {
+export function PlanUsageBadge({ plan, isLtd = false, profileCount, workspaceSlug }: PlanUsageBadgeProps) {
   const planId = (PLAN_LABELS[plan as PlanId] ? (plan as PlanId) : "free") as PlanId;
-  const label = PLAN_LABELS[planId];
+  const label = isLtd ? "Lifetime" : PLAN_LABELS[planId];
   const limit = PLAN_LIMITS[planId].profiles;
   const isUnlimited = limit === -1;
-  const isPaid = planId !== "free";
+  const isPaid = isLtd || planId !== "free";
   const usageRatio = isUnlimited ? 0 : Math.min(1, profileCount / limit);
   const atLimit = !isUnlimited && profileCount >= limit;
 

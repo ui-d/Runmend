@@ -82,6 +82,14 @@ export const checkoutSchema = z.object({
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
+// --- Billing: Lifetime deal ---
+
+export const claimLtdSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID"),
+});
+
+export type ClaimLtdInput = z.infer<typeof claimLtdSchema>;
+
 // --- Billing portal ---
 
 export const portalSchema = z.object({

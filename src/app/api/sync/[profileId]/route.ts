@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncProfile } from "@/lib/sync/engine";
-import { checkPlanLimit } from "@/lib/stripe";
+import { checkPlanLimit, resolveEffectivePlan } from "@/lib/stripe";
 
 interface RouteContext {
   params: Promise<{ profileId: string }>;
@@ -36,11 +36,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // Check plan limit for syncs per day
     const { data: subscription } = await supabase
       .from("subscriptions")
-      .select("plan")
+      .select("plan, is_ltd")
       .eq("workspace_id", profile.workspace_id)
       .maybeSingle();
 
-    const plan = subscription?.plan ?? "free";
+    const plan = resolveEffectivePlan(subscription);
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 

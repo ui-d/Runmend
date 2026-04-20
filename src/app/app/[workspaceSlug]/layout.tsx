@@ -7,6 +7,7 @@ import { UserMenu } from "@/components/auth/UserMenu";
 import { NotificationBell } from "@/components/app/NotificationBell";
 import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { getWorkspaceSubscription } from "@/lib/queries/subscriptions";
+import { resolveEffectivePlan } from "@/lib/stripe";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -44,7 +45,8 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps)
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         workspaceSlug={workspaceSlug}
-        plan={subscription?.plan ?? "free"}
+        plan={resolveEffectivePlan(subscription)}
+        isLtd={subscription?.is_ltd ?? false}
         profileCount={profileCount ?? 0}
       />
       <div className="flex-1 flex flex-col overflow-hidden">

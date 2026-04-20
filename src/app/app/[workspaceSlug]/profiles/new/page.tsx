@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceBySlug } from "@/lib/queries/workspaces";
 import { getWorkspaceProfiles } from "@/lib/queries/profiles";
 import { getWorkspaceSubscription } from "@/lib/queries/subscriptions";
-import { checkPlanLimit } from "@/lib/stripe";
+import { checkPlanLimit, resolveEffectivePlan } from "@/lib/stripe";
 import { ProfileForm } from "@/components/app/ProfileForm";
 
 interface PageProps {
@@ -24,7 +24,7 @@ export default async function NewProfilePage({ params }: PageProps) {
 
   const profiles = await getWorkspaceProfiles(supabase, workspace.id);
   const subscription = await getWorkspaceSubscription(supabase, workspace.id);
-  const plan = subscription?.plan ?? "free";
+  const plan = resolveEffectivePlan(subscription);
   const limitCheck = checkPlanLimit(plan, "profiles", profiles.length);
 
   return (
