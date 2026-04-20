@@ -1,18 +1,28 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceBySlug } from "@/lib/queries/workspaces";
-import { getWorkspaceProfiles } from "@/lib/queries/profiles";
 import { getWorkspaceConnections } from "@/lib/queries/connections";
-import { getHealthStatus, getHealthColorClasses, getPlatformLabel } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, BarChart3, AlertTriangle, Activity } from "lucide-react";
+import {
+  getWorkspacePulse,
+  getWorkspaceOpenIssues,
+  getWorkspaceActivity,
+  getWorkspaceProfileCards,
+} from "@/lib/queries/workspace-dashboard";
+import { rollupDetectorStates } from "@/lib/dashboard/derivations";
 import { OnboardingWizard } from "@/components/app/OnboardingWizard";
+import { WorkspacePulse } from "@/components/app/dashboard/WorkspacePulse";
+import { WorkspaceDetectorStrip } from "@/components/app/dashboard/WorkspaceDetectorStrip";
+import { ActivityFeed } from "@/components/app/dashboard/ActivityFeed";
+import { ProfilePulseCard } from "@/components/app/dashboard/ProfilePulseCard";
+import { NextStepsStrip } from "@/components/app/dashboard/NextStepsStrip";
 
 interface PageProps {
   params: Promise<{ workspaceSlug: string }>;
 }
+
+const PROFILE_PREVIEW_COUNT = 4;
 
 export default async function WorkspaceDashboard({ params }: PageProps) {
   const { workspaceSlug } = await params;
@@ -26,43 +36,60 @@ export default async function WorkspaceDashboard({ params }: PageProps) {
   const workspace = await getWorkspaceBySlug(supabase, workspaceSlug);
   if (!workspace) redirect("/app");
 
-  const profiles = await getWorkspaceProfiles(supabase, workspace.id);
-  const connections = await getWorkspaceConnections(supabase, workspace.id);
+  const [pulse, rollupIssues, activity, profileCards, connections] = await Promise.all([
+    getWorkspacePulse(supabase, workspace.id),
+    getWorkspaceOpenIssues(supabase, workspace.id),
+    getWorkspaceActivity(supabase, workspace.id, 12),
+    getWorkspaceProfileCards(supabase, workspace.id),
+    getWorkspaceConnections(supabase, workspace.id),
+  ]);
 
-  const hasConnections = connections.some((c) => c.status === "active");
-  const totalProfiles = profiles.length;
-  const avgHealth =
-    totalProfiles > 0
-      ? Math.round(
-          profiles.reduce((sum, p) => sum + p.health_score, 0) / totalProfiles
-        )
-      : 0;
-  const criticalIssues = profiles.reduce(
-    (sum, p) =>
-      sum +
-      p.automation_issues.filter((i) => i.severity === "critical").length,
-    0
-  );
+  const detectorRollup = rollupDetectorStates(rollupIssues);
+  const hasAnyProfiles = profileCards.length > 0;
+  const hasActiveConnection = connections.some((c) => c.status === "active");
 
-  const showOnboarding = totalProfiles === 0;
+  // Show onboarding wizard only when the workspace is effectively empty.
+  const showOnboarding = !hasAnyProfiles;
+
+  // Profile preview: worst-first (criticals desc, then score asc). At scale,
+  // the full list lives on /profiles.
+  const orderedProfiles = [...profileCards].sort((a, b) => {
+    if (b.criticalIssueCount !== a.criticalIssueCount) {
+      return b.criticalIssueCount - a.criticalIssueCount;
+    }
+    return a.healthScore - b.healthScore;
+  });
+  const previewProfiles = orderedProfiles.slice(0, PROFILE_PREVIEW_COUNT);
+  const extraProfileCount = Math.max(0, orderedProfiles.length - PROFILE_PREVIEW_COUNT);
+
+  const hasSchedule = await hasAnyActiveSchedule(supabase, profileCards.map((p) => p.id));
+  const memberCount = await getMemberCount(supabase, workspace.id);
+  const nextStepsState = {
+    hasConnection: hasActiveConnection,
+    hasProfile: hasAnyProfiles,
+    hasSchedule,
+    hasAlerts: false, // Alerts config not yet wired — always remind.
+    hasTeammates: memberCount > 1,
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {showOnboarding && (
         <OnboardingWizard
           workspaceSlug={workspaceSlug}
-          hasConnections={hasConnections}
-          hasProfiles={totalProfiles > 0}
+          hasConnections={hasActiveConnection}
+          hasProfiles={hasAnyProfiles}
         />
       )}
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">Automation health</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {workspace.name}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {totalProfiles} automation profile{totalProfiles !== 1 ? "s" : ""}
+            {hasAnyProfiles
+              ? ` · ${pulse.totalProfiles} profile${pulse.totalProfiles === 1 ? "" : "s"}`
+              : ""}
           </p>
         </div>
         <Link
@@ -74,117 +101,67 @@ export default async function WorkspaceDashboard({ params }: PageProps) {
         </Link>
       </div>
 
-      {totalProfiles > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{totalProfiles}</p>
-                <p className="text-xs text-muted-foreground">Profiles</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Activity className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{avgHealth}</p>
-                <p className="text-xs text-muted-foreground">Avg Health</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{criticalIssues}</p>
-                <p className="text-xs text-muted-foreground">
-                  Critical Issues
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+      <WorkspacePulse
+        pulse={pulse}
+        workspaceSlug={workspaceSlug}
+        hasAnyProfiles={hasAnyProfiles}
+      />
+
+      {hasAnyProfiles && <WorkspaceDetectorStrip rollup={detectorRollup} />}
+
+      {hasAnyProfiles && (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground">Profiles</h2>
+              {extraProfileCount > 0 && (
+                <Link
+                  href={`/app/${workspaceSlug}/profiles`}
+                  className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  View all {orderedProfiles.length} profiles →
+                </Link>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {previewProfiles.map((profile) => (
+                <ProfilePulseCard
+                  key={profile.id}
+                  profile={profile}
+                  workspaceSlug={workspaceSlug}
+                />
+              ))}
+            </div>
+          </div>
+          <ActivityFeed events={activity} workspaceSlug={workspaceSlug} />
         </div>
       )}
 
-      {totalProfiles === 0 ? (
-        <Card className="text-center py-16">
-          <CardContent>
-            <BarChart3 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-lg font-medium">No profiles yet</h3>
-            <p className="text-sm text-muted-foreground mt-1 mb-6">
-              Create your first automation profile to start monitoring
-            </p>
-            <Link
-              href={`/app/${workspaceSlug}/profiles/new`}
-              className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium h-9 px-4 hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Profile
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {profiles.map((profile) => {
-            const status = getHealthStatus(profile.health_score);
-            const colors = getHealthColorClasses(status);
-            const critCount = profile.automation_issues.filter(
-              (i) => i.severity === "critical"
-            ).length;
-
-            return (
-              <Link
-                key={profile.id}
-                href={`/app/${workspaceSlug}/profiles/${profile.id}`}
-              >
-                <Card className="hover:border-foreground/20 transition-colors cursor-pointer">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base truncate">
-                        {profile.name}
-                      </CardTitle>
-                      <Badge variant="outline" className="text-xs">
-                        {getPlatformLabel(profile.platform as "make" | "n8n")}
-                      </Badge>
-                    </div>
-                    {profile.industry && (
-                      <p className="text-xs text-muted-foreground">
-                        {profile.industry}
-                      </p>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className={`text-2xl font-bold ${colors.text}`}>
-                        {profile.health_score}
-                      </span>
-                      <div className="text-right text-xs text-muted-foreground">
-                        {critCount > 0 && (
-                          <span className="text-red-500 font-medium">
-                            {critCount} critical
-                          </span>
-                        )}
-                        <p>
-                          {profile.automation_issues.length} issue
-                          {profile.automation_issues.length !== 1 ? "s" : ""}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+      <NextStepsStrip workspaceSlug={workspaceSlug} state={nextStepsState} />
     </div>
   );
+}
+
+async function hasAnyActiveSchedule(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  profileIds: string[],
+): Promise<boolean> {
+  if (profileIds.length === 0) return false;
+  const { count } = await supabase
+    .from("audit_schedules")
+    .select("profile_id", { count: "exact", head: true })
+    .eq("is_active", true)
+    .in("profile_id", profileIds);
+  return (count ?? 0) > 0;
+}
+
+async function getMemberCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from("workspace_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId);
+  return count ?? 0;
 }

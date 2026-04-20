@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Link2, Settings, BarChart3, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PlanBadge } from "./PlanBadge";
+import { PlanUsageBadge } from "./PlanUsageBadge";
 
 interface SidebarProps {
   workspaceSlug: string;
   plan?: string;
+  profileCount?: number;
 }
 
 const navItems = [
@@ -19,7 +20,7 @@ const navItems = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar({ workspaceSlug, plan }: SidebarProps) {
+export function Sidebar({ workspaceSlug, plan, profileCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const basePath = `/app/${workspaceSlug}`;
 
@@ -57,7 +58,11 @@ export function Sidebar({ workspaceSlug, plan }: SidebarProps) {
       </nav>
       {plan && (
         <div className="p-4 border-t border-border">
-          <PlanBadge plan={plan} />
+          <PlanUsageBadge
+            plan={plan}
+            profileCount={profileCount}
+            workspaceSlug={workspaceSlug}
+          />
         </div>
       )}
     </aside>

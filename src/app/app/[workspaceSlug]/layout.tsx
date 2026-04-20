@@ -35,9 +35,18 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps)
 
   const subscription = await getWorkspaceSubscription(supabase, workspace.id);
 
+  const { count: profileCount } = await supabase
+    .from("automation_profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspace.id);
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar workspaceSlug={workspaceSlug} plan={subscription?.plan ?? "free"} />
+      <Sidebar
+        workspaceSlug={workspaceSlug}
+        plan={subscription?.plan ?? "free"}
+        profileCount={profileCount ?? 0}
+      />
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-14 border-b border-border flex items-center justify-between px-6">
           <WorkspaceSelector

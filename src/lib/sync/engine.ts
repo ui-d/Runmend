@@ -202,6 +202,29 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
   // 12. Update per-automation stats in a single SQL query via RPC
   await admin.rpc("update_automation_stats", { p_profile_id: profileId });
 
+  // 13. Capture a daily health snapshot (upsert so repeat syncs overwrite).
+  //     Powers the workspace Pulse trend line and per-profile sparklines.
+  const openCount = detectedIssues.length;
+  const criticalCount = detectedIssues.filter((i) => i.severity === "critical").length;
+  const automationCount = allAutomations?.length ?? 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const { error: snapshotError } = await admin
+    .from("profile_health_snapshots")
+    .upsert(
+      {
+        profile_id: profileId,
+        captured_on: today,
+        health_score: healthScore,
+        open_issue_count: openCount,
+        critical_issue_count: criticalCount,
+        automation_count: automationCount,
+      },
+      { onConflict: "profile_id,captured_on" },
+    );
+  if (snapshotError) {
+    errors.push(`Failed to write health snapshot: ${snapshotError.message}`);
+  }
+
   return {
     automationsUpserted,
     executionsInserted,
