@@ -119,6 +119,7 @@ export type Database = {
           name: string
           platform: string
           scenario_count: number
+          snoozed_until: string | null
           updated_at: string
           workspace_id: string
         }
@@ -132,6 +133,7 @@ export type Database = {
           name: string
           platform: string
           scenario_count?: number
+          snoozed_until?: string | null
           updated_at?: string
           workspace_id: string
         }
@@ -145,6 +147,7 @@ export type Database = {
           name?: string
           platform?: string
           scenario_count?: number
+          snoozed_until?: string | null
           updated_at?: string
           workspace_id?: string
         }

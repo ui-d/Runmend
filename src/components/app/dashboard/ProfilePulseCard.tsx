@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import type { WorkspaceProfileCardData } from "@/lib/queries/workspace-dashboard";
 import { getPlatformLabel } from "@/lib/types";
 import { DETECTORS } from "@/lib/detectors";
@@ -9,6 +9,7 @@ import {
   sparklinePath,
 } from "@/lib/dashboard/derivations";
 import { formatRelative } from "@/lib/time";
+import { DeltaChip } from "@/components/app/dashboard/DeltaChip";
 
 interface ProfilePulseCardProps {
   profile: WorkspaceProfileCardData;
@@ -46,7 +47,9 @@ export function ProfilePulseCard({ profile, workspaceSlug }: ProfilePulseCardPro
             <span className={`text-3xl font-bold tabular-nums leading-none ${sev.text}`}>
               {profile.healthScore}
             </span>
-            <DeltaChip delta={profile.sparklineDelta} />
+            <span className="mt-1">
+              <DeltaChip delta={profile.sparklineDelta} />
+            </span>
           </div>
         </div>
 
@@ -154,26 +157,3 @@ function Sparkline({
   );
 }
 
-function DeltaChip({ delta }: { delta: number | null }) {
-  if (delta === null) return null;
-  if (delta === 0) {
-    return (
-      <span className="mt-1 inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
-        <Minus className="h-2.5 w-2.5" />
-        flat
-      </span>
-    );
-  }
-  const positive = delta > 0;
-  return (
-    <span
-      className={`mt-1 inline-flex items-center gap-0.5 text-[10px] font-medium tabular-nums ${
-        positive ? "text-emerald-500" : "text-red-500"
-      }`}
-    >
-      {positive ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-      {positive ? "+" : ""}
-      {delta}
-    </span>
-  );
-}

@@ -68,6 +68,28 @@ export interface WorkspaceProfileCardData {
   platformUrl: string | null;
 }
 
+export type SyncFreshness = "fresh" | "recent" | "stale" | "never";
+
+export interface AutomationHealthBuckets {
+  green: number;
+  amber: number;
+  red: number;
+  total: number;
+}
+
+export interface SeverityCounts {
+  critical: number;
+  warning: number;
+  info: number;
+}
+
+export interface WorkspaceProfileTriageRow extends WorkspaceProfileCardData {
+  severityCounts: SeverityCounts;
+  automationHealth: AutomationHealthBuckets;
+  snoozedUntil: string | null;
+  freshness: SyncFreshness;
+}
+
 /**
  * Core dashboard pulse: current rolled-up score, 30-day workspace-avg trend,
  * delta vs. oldest snapshot in that window, worst profile, and roll-up totals.
@@ -582,4 +604,169 @@ function enumerateDates(fromISO: string, toISO: string): string[] {
 
 function platformLabel(platform: Platform): string {
   return platform === "make" ? "Make.com" : "n8n";
+}
+
+/**
+ * Triage table data: dashboard card data + per-automation health buckets,
+ * severity-split issue counts, snooze state, and sync-freshness label.
+ * One extra round-trip vs. card query (automations.status aggregation).
+ */
+export async function getWorkspaceProfileTriage(
+  supabase: Client,
+  workspaceId: string,
+): Promise<WorkspaceProfileTriageRow[]> {
+  const { data: profiles, error: profilesError } = await supabase
+    .from("automation_profiles")
+    .select(
+      "id, name, platform, industry, health_score, last_audit_at, scenario_count, snoozed_until, automation_issues(id, type, severity, status)",
+    )
+    .eq("workspace_id", workspaceId)
+    .eq("automation_issues.status", "open")
+    .order("created_at", { ascending: false });
+  if (profilesError) throw profilesError;
+
+  const profileRows = (profiles ?? []) as Array<{
+    id: string;
+    name: string;
+    platform: string;
+    industry: string | null;
+    health_score: number;
+    last_audit_at: string | null;
+    scenario_count: number;
+    snoozed_until: string | null;
+    automation_issues: Array<{
+      id: string;
+      type: string | null;
+      severity: string;
+      status: string;
+    }>;
+  }>;
+  if (profileRows.length === 0) return [];
+
+  const profileIds = profileRows.map((p) => p.id);
+
+  const [sparklines, connectionsRes, automationsRes] = await Promise.all([
+    getProfileSparklines(supabase, workspaceId, 14),
+    supabase
+      .from("platform_connections")
+      .select("platform, last_synced_at, zone, team_id, instance_url")
+      .eq("workspace_id", workspaceId),
+    supabase
+      .from("automations")
+      .select("profile_id, status, total_runs, failed_runs")
+      .in("profile_id", profileIds),
+  ]);
+  if (connectionsRes.error) throw connectionsRes.error;
+  if (automationsRes.error) throw automationsRes.error;
+
+  const syncByPlatform = new Map<Platform, string>();
+  const urlByPlatform = new Map<Platform, string>();
+  for (const row of connectionsRes.data ?? []) {
+    const platform = row.platform as Platform;
+    if (row.last_synced_at) {
+      const existing = syncByPlatform.get(platform);
+      if (!existing || row.last_synced_at > existing) {
+        syncByPlatform.set(platform, row.last_synced_at);
+      }
+    }
+    if (!urlByPlatform.has(platform)) {
+      const url = buildPlatformDashboardUrl(
+        platform,
+        row.zone,
+        row.team_id,
+        row.instance_url,
+      );
+      if (url) urlByPlatform.set(platform, url);
+    }
+  }
+
+  const automationHealthByProfile = new Map<string, AutomationHealthBuckets>();
+  for (const row of automationsRes.data ?? []) {
+    const bucket = automationHealthByProfile.get(row.profile_id) ?? {
+      green: 0,
+      amber: 0,
+      red: 0,
+      total: 0,
+    };
+    bucket.total += 1;
+    bucket[bucketAutomation(row.status, row.total_runs, row.failed_runs)] += 1;
+    automationHealthByProfile.set(row.profile_id, bucket);
+  }
+
+  return profileRows.map((profile) => {
+    const openIssues = profile.automation_issues ?? [];
+    const severityCounts: SeverityCounts = { critical: 0, warning: 0, info: 0 };
+    const types = new Set<IssueType>();
+    for (const issue of openIssues) {
+      if (issue.severity === "critical") severityCounts.critical += 1;
+      else if (issue.severity === "warning") severityCounts.warning += 1;
+      else if (issue.severity === "info") severityCounts.info += 1;
+      if (isIssueType(issue.type)) types.add(issue.type);
+    }
+
+    const sparkline = sparklines[profile.id] ?? [];
+    const sparklineDelta =
+      sparkline.length >= 2 ? profile.health_score - sparkline[0].score : null;
+
+    const lastSyncedAt = syncByPlatform.get(profile.platform as Platform) ?? null;
+
+    return {
+      id: profile.id,
+      name: profile.name,
+      platform: profile.platform as Platform,
+      industry: profile.industry,
+      healthScore: profile.health_score,
+      openIssueCount: openIssues.length,
+      criticalIssueCount: severityCounts.critical,
+      automationCount: profile.scenario_count ?? 0,
+      lastAuditAt: profile.last_audit_at,
+      lastSyncedAt,
+      openIssueTypes: Array.from(types),
+      sparkline,
+      sparklineDelta,
+      platformUrl: urlByPlatform.get(profile.platform as Platform) ?? null,
+      severityCounts,
+      automationHealth:
+        automationHealthByProfile.get(profile.id) ?? {
+          green: 0,
+          amber: 0,
+          red: 0,
+          total: profile.scenario_count ?? 0,
+        },
+      snoozedUntil: profile.snoozed_until,
+      freshness: deriveFreshness(lastSyncedAt),
+    };
+  });
+}
+
+function bucketAutomation(
+  status: string,
+  totalRuns: number,
+  failedRuns: number,
+): "green" | "amber" | "red" {
+  const inactive =
+    status === "disabled" ||
+    status === "inactive" ||
+    status === "paused" ||
+    status === "off";
+  if (inactive) return "red";
+  if (totalRuns > 0 && failedRuns / totalRuns > 0.1) return "amber";
+  return "green";
+}
+
+/**
+ * Sync freshness buckets used by the table dot indicator and "Stale sync"
+ * filter chip. Thresholds: <1h fresh, <24h recent, >7d stale; null = never.
+ */
+export function deriveFreshness(
+  lastSyncedAt: string | null,
+  now: Date = new Date(),
+): SyncFreshness {
+  if (!lastSyncedAt) return "never";
+  const diff = now.getTime() - new Date(lastSyncedAt).getTime();
+  if (Number.isNaN(diff)) return "never";
+  const hour = 60 * 60 * 1000;
+  if (diff < hour) return "fresh";
+  if (diff < 7 * 24 * hour) return "recent";
+  return "stale";
 }
