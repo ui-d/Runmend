@@ -6,11 +6,17 @@ import { AutomationProfile, getHealthStatus } from "@/lib/types";
 import { useDiagnostic } from "@/hooks/useDiagnostic";
 import { useSync } from "@/hooks/useSync";
 import { ProfileHeader } from "./ProfileHeader";
-import { HealthScore } from "./HealthScore";
-import { IssuesList } from "./IssuesList";
+import { HealthHero } from "./HealthHero";
+import { DetectorStrip } from "./DetectorStrip";
+import {
+  AutomationTileGrid,
+  type AutomationTile,
+} from "./AutomationTileGrid";
+import { IssuesByDetector } from "./IssuesByDetector";
 import { DiagnosticNarrative } from "./DiagnosticNarrative";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Clock } from "lucide-react";
+import { RefreshCw, Clock, Sparkles, ChevronDown } from "lucide-react";
+import type { ConnectionUrlContext } from "@/lib/platform-adapters/urls";
 
 interface DashboardShellProps {
   profile: AutomationProfile;
@@ -19,6 +25,10 @@ interface DashboardShellProps {
   isAuthenticatedView?: boolean;
   diagnosticsHistoryUrl?: string;
   scheduleActive?: boolean;
+  backHref?: string;
+  backLabel?: string;
+  automations?: AutomationTile[];
+  connectionContext?: ConnectionUrlContext | null;
 }
 
 export function DashboardShell({
@@ -28,11 +38,16 @@ export function DashboardShell({
   isAuthenticatedView,
   diagnosticsHistoryUrl,
   scheduleActive,
+  backHref,
+  backLabel,
+  automations,
+  connectionContext,
 }: DashboardShellProps) {
   const { narrative, isLoading, error, retry } = useDiagnostic(profile.id);
   const { sync, isSyncing } = useSync(profile.id);
   const [scheduleEnabled, setScheduleEnabled] = useState(scheduleActive ?? false);
   const [togglingSchedule, setTogglingSchedule] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const router = useRouter();
 
   async function handleSync() {
@@ -65,6 +80,33 @@ export function DashboardShell({
 
   const showSyncButton = isAuthenticatedView && hasConnection;
 
+  const toolbar = showSyncButton ? (
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={handleToggleSchedule}
+        disabled={togglingSchedule}
+        variant="ghost"
+        size="sm"
+        className={`text-xs ${scheduleEnabled ? "text-emerald-500" : "text-muted-foreground"}`}
+      >
+        <Clock className="mr-1 h-3 w-3" />
+        {scheduleEnabled ? "Auto-sync on" : "Auto-sync off"}
+      </Button>
+      <Button
+        onClick={handleSync}
+        disabled={isSyncing}
+        variant="outline"
+        size="sm"
+      >
+        <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+        {isSyncing ? "Syncing..." : "Sync Now"}
+      </Button>
+    </div>
+  ) : null;
+
+  const showAutomationGrid = (automations?.length ?? 0) > 0;
+  const healthStatus = getHealthStatus(profile.healthScore);
+
   return (
     <div className="min-h-screen">
       {!isAuthenticatedView && (
@@ -77,54 +119,62 @@ export function DashboardShell({
         </header>
       )}
 
-      <main className={`${isAuthenticatedView ? "" : "max-w-6xl mx-auto px-4"} py-8 space-y-8`}>
-        <div className="flex items-start justify-between gap-4">
-          <ProfileHeader
-            profile={profile}
-            lastSyncedAt={lastSyncedAt}
-            hideBackLink={isAuthenticatedView}
-          />
-          {showSyncButton && (
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                onClick={handleToggleSchedule}
-                disabled={togglingSchedule}
-                variant="ghost"
-                size="sm"
-                className={`text-xs ${scheduleEnabled ? "text-emerald-500" : "text-muted-foreground"}`}
-              >
-                <Clock className="mr-1 h-3 w-3" />
-                {scheduleEnabled ? "Auto-sync on" : "Auto-sync off"}
-              </Button>
-              <Button
-                onClick={handleSync}
-                disabled={isSyncing}
-                variant="outline"
-                size="sm"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                {isSyncing ? "Syncing..." : "Sync Now"}
-              </Button>
-            </div>
-          )}
-        </div>
+      <main
+        className={`${isAuthenticatedView ? "" : "max-w-6xl mx-auto px-4"} py-8 space-y-6`}
+      >
+        <ProfileHeader
+          profile={profile}
+          lastSyncedAt={lastSyncedAt}
+          hideBackLink={isAuthenticatedView && !backHref}
+          backHref={backHref}
+          backLabel={backLabel}
+          rightSlot={toolbar}
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          <div className="space-y-6 min-w-0">
-            <HealthScore score={profile.healthScore} />
-            <IssuesList issues={profile.issues} />
-          </div>
-          <div className="min-w-0 lg:sticky lg:top-6">
+        <HealthHero score={profile.healthScore} issues={profile.issues} />
+
+        <DetectorStrip issues={profile.issues} />
+
+        {showAutomationGrid && (
+          <AutomationTileGrid
+            automations={automations ?? []}
+            issues={profile.issues}
+            platform={profile.platform}
+            connection={connectionContext ?? null}
+          />
+        )}
+
+        <IssuesByDetector
+          issues={profile.issues}
+          platform={profile.platform}
+        />
+
+        <details
+          className="group rounded-xl border border-border/60 bg-card/40"
+          onToggle={(e) => setAiOpen((e.target as HTMLDetailsElement).open)}
+          open={aiOpen}
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-muted/20">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">AI analysis</span>
+              <span className="text-xs text-muted-foreground">
+                — Claude&apos;s independent take on this profile
+              </span>
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="border-t border-border/60 p-4">
             <DiagnosticNarrative
               narrative={narrative}
               isLoading={isLoading}
               error={error}
               onRetry={retry}
               historyUrl={diagnosticsHistoryUrl}
-              healthStatus={getHealthStatus(profile.healthScore)}
+              healthStatus={healthStatus}
             />
           </div>
-        </div>
+        </details>
       </main>
 
       {!isAuthenticatedView && (

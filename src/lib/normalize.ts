@@ -1,6 +1,7 @@
 import type { AutomationProfile, AutomationIssue } from "@/lib/types";
 import type { Database } from "@/lib/database.types";
 import { buildScenarioUrl, type ConnectionUrlContext } from "@/lib/platform-adapters/urls";
+import { isIssueType } from "@/lib/detectors";
 
 type DbProfile = Database["public"]["Tables"]["automation_profiles"]["Row"];
 type DbIssue = Database["public"]["Tables"]["automation_issues"]["Row"];
@@ -32,34 +33,30 @@ function normalizeIssue(
   dbIssue: DbIssue,
   context?: NormalizeContext
 ): AutomationIssue {
-  const scenarioUrl = resolveScenarioUrl(dbIssue, context);
+  const externalId = resolveExternalId(dbIssue, context);
+  const scenarioUrl =
+    externalId && context?.connection
+      ? buildScenarioUrl(context.connection, externalId)
+      : undefined;
 
   return {
     id: dbIssue.id,
+    type: isIssueType(dbIssue.type) ? dbIssue.type : null,
     severity: dbIssue.severity as AutomationIssue["severity"],
     name: dbIssue.name,
     automationName: dbIssue.automation_name,
     businessImpact: dbIssue.business_impact,
     recommendation: dbIssue.recommendation,
     scenarioUrl,
+    externalId,
   };
 }
 
-function resolveScenarioUrl(
+function resolveExternalId(
   dbIssue: DbIssue,
   context?: NormalizeContext
 ): string | undefined {
-  if (!context?.connection || !context.automationExternalIdByName) {
-    return undefined;
-  }
-
-  // Connection-level issues (e.g. "Credential expiring") don't map to a scenario
-  if (dbIssue.automation_name === "Platform Connection") {
-    return undefined;
-  }
-
-  const externalId = context.automationExternalIdByName.get(dbIssue.automation_name);
-  if (!externalId) return undefined;
-
-  return buildScenarioUrl(context.connection, externalId);
+  if (!context?.automationExternalIdByName) return undefined;
+  if (dbIssue.automation_name === "Platform Connection") return undefined;
+  return context.automationExternalIdByName.get(dbIssue.automation_name);
 }

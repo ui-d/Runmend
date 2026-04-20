@@ -1,10 +1,12 @@
 import type { Database } from "@/lib/database.types";
+import type { IssueType } from "@/lib/detectors";
 
 type AutomationRow = Database["public"]["Tables"]["automations"]["Row"];
 type ExecutionLogRow = Database["public"]["Tables"]["execution_logs"]["Row"];
 type ConnectionRow = Database["public"]["Tables"]["platform_connections"]["Row"];
 
 export interface DetectedIssue {
+  type: IssueType;
   severity: "critical" | "warning" | "info";
   name: string;
   automationName: string;
@@ -43,6 +45,7 @@ export function detectIssues(
     // Rule 1: Silent failure - active automation with 0 executions in 7 days
     if (automation.status === "active" && recentExecs.length === 0 && autoExecs.length > 0) {
       issues.push({
+        type: "silent_failure",
         severity: "critical",
         name: "Silent failure detected",
         automationName: automation.name,
@@ -57,6 +60,7 @@ export function detectIssues(
       const errorRate = errorCount / last24h.length;
       if (errorRate > 0.3) {
         issues.push({
+          type: "high_error_rate",
           severity: "critical",
           name: "High error rate",
           automationName: automation.name,
@@ -75,6 +79,7 @@ export function detectIssues(
 
       if (weeklyErrorRate > 0 && dailyErrorRate / weeklyErrorRate > 2) {
         issues.push({
+          type: "error_spike",
           severity: "warning",
           name: "Error rate spike",
           automationName: automation.name,
@@ -95,6 +100,7 @@ export function detectIssues(
     }
     if (consecutiveFailures >= 5) {
       issues.push({
+        type: "consecutive_failures",
         severity: "critical",
         name: "Consecutive failures",
         automationName: automation.name,
@@ -109,6 +115,7 @@ export function detectIssues(
     );
     if (automation.status === "active" && !anyRecentExec && autoExecs.length === 0) {
       issues.push({
+        type: "zombie_automation",
         severity: "info",
         name: "Zombie automation",
         automationName: automation.name,
@@ -124,6 +131,7 @@ export function detectIssues(
     const daysUntilExpiry = (expiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000);
     if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
       issues.push({
+        type: "credential_expiration",
         severity: "warning",
         name: "Credential expiring soon",
         automationName: "Platform Connection",
@@ -132,6 +140,7 @@ export function detectIssues(
       });
     } else if (daysUntilExpiry <= 0) {
       issues.push({
+        type: "credential_expiration",
         severity: "critical",
         name: "Credentials expired",
         automationName: "Platform Connection",

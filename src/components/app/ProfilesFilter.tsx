@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface ProfilesFilterProps {
   workspaceSlug: string;

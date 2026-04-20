@@ -29,21 +29,8 @@ export class MakeAdapter implements PlatformAdapter {
         const body = await res.text();
         return { ok: false, error: `Make.com API error: ${res.status} ${body}` };
       }
-      const userData = await res.json();
 
-      // Discover organizationId for listing scenarios
-      let teamId: number | null = null;
-      const orgsRes = await fetchWithRetry(`${this.baseUrl}/organizations`, {
-        headers: this.headers,
-      });
-      if (orgsRes.ok) {
-        const orgsData = await orgsRes.json();
-        const orgs = orgsData.organizations ?? orgsData ?? [];
-        if (Array.isArray(orgs) && orgs.length > 0) {
-          teamId = orgs[0].id;
-        }
-      }
-
+      const teamId = await this.discoverTeamId();
       if (teamId) this.teamId = teamId;
       return { ok: true, metadata: { teamId } };
     } catch (err: unknown) {
@@ -53,32 +40,51 @@ export class MakeAdapter implements PlatformAdapter {
     }
   }
 
-  private async resolveOrgId(): Promise<number | null> {
-    if (this.teamId) return this.teamId;
-    const res = await fetchWithRetry(`${this.baseUrl}/organizations`, {
+  private async discoverTeamId(): Promise<number | null> {
+    // Make.com hierarchy: organizations → teams → scenarios.
+    // Scenario browser URLs use the *team* id in the path, so we resolve the
+    // first team under the first organization the token can see.
+    const orgsRes = await fetchWithRetry(`${this.baseUrl}/organizations`, {
       headers: this.headers,
     });
-    if (res.ok) {
-      const data = await res.json();
-      const orgs = data.organizations ?? data ?? [];
-      if (Array.isArray(orgs) && orgs.length > 0) {
-        this.teamId = orgs[0].id;
-      }
-    }
+    if (!orgsRes.ok) return null;
+
+    const orgsData = await orgsRes.json();
+    const orgs = orgsData.organizations ?? orgsData ?? [];
+    if (!Array.isArray(orgs) || orgs.length === 0) return null;
+    const orgId = orgs[0].id;
+    if (!orgId) return null;
+
+    const teamsRes = await fetchWithRetry(
+      `${this.baseUrl}/teams?organizationId=${orgId}`,
+      { headers: this.headers },
+    );
+    if (!teamsRes.ok) return null;
+
+    const teamsData = await teamsRes.json();
+    const teams = teamsData.teams ?? teamsData ?? [];
+    if (!Array.isArray(teams) || teams.length === 0) return null;
+    return teams[0].id ?? null;
+  }
+
+  private async resolveTeamId(): Promise<number | null> {
+    if (this.teamId) return this.teamId;
+    const teamId = await this.discoverTeamId();
+    if (teamId) this.teamId = teamId;
     return this.teamId;
   }
 
   async fetchAutomations(): Promise<NormalizedAutomation[]> {
-    const orgId = await this.resolveOrgId();
+    const teamId = await this.resolveTeamId();
     const allScenarios: NormalizedAutomation[] = [];
     const pageSize = 500;
     const maxPages = 10;
 
     for (let page = 0; page < maxPages; page++) {
       const offset = page * pageSize;
-      const orgParam = orgId ? `&organizationId=${orgId}` : "";
+      const teamParam = teamId ? `&teamId=${teamId}` : "";
       const res = await fetchWithRetry(
-        `${this.baseUrl}/scenarios?pg[limit]=${pageSize}&pg[offset]=${offset}${orgParam}`,
+        `${this.baseUrl}/scenarios?pg[limit]=${pageSize}&pg[offset]=${offset}${teamParam}`,
         { headers: this.headers }
       );
 

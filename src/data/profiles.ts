@@ -14,6 +14,7 @@ export const profiles: AutomationProfile[] = [
     issues: [
       {
         id: "cc-1",
+        type: "silent_failure",
         severity: "critical",
         name: "Client Onboarding Webhook Failure",
         automationName: "New Client → Slack + Asana + Google Drive",
@@ -24,6 +25,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "cc-2",
+        type: "silent_failure",
         severity: "critical",
         name: "Invoice Generation Stopped",
         automationName: "Monthly Invoice → QuickBooks + Email Client",
@@ -34,6 +36,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "cc-3",
+        type: "silent_failure",
         severity: "critical",
         name: "Social Media Scheduler Silent Failure",
         automationName: "Content Calendar → Buffer → LinkedIn + Twitter",
@@ -44,6 +47,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "cc-4",
+        type: "high_error_rate",
         severity: "warning",
         name: "Client Report Emails Missing Names",
         automationName: "Weekly Report → Format → Email Client",
@@ -54,6 +58,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "cc-5",
+        type: null,
         severity: "warning",
         name: "Approaching Make.com Operations Limit",
         automationName: "Account-wide",
@@ -64,6 +69,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "cc-6",
+        type: "zombie_automation",
         severity: "info",
         name: "Zombie Automation: Old CRM Migration",
         automationName: "HubSpot → Salesforce Contact Sync",
@@ -74,6 +80,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "cc-7",
+        type: null,
         severity: "info",
         name: "Duplicate Notification Paths",
         automationName: "New Lead → Slack #leads + Email + SMS",
@@ -97,6 +104,7 @@ export const profiles: AutomationProfile[] = [
     issues: [
       {
         id: "gl-1",
+        type: "silent_failure",
         severity: "critical",
         name: "Stripe → Mailchimp Sequence Stopped",
         automationName: "New Purchase → Add to Post-Purchase Email Sequence",
@@ -107,6 +115,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "gl-2",
+        type: "credential_expiration",
         severity: "critical",
         name: "Google Sheets Credential Expiring",
         automationName: "Daily Inventory Sync → Google Sheets → Shopify",
@@ -117,6 +126,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "gl-3",
+        type: "high_error_rate",
         severity: "warning",
         name: "Order Confirmation Empty Customer Names",
         automationName: "New Order → Format → Send Confirmation Email",
@@ -127,6 +137,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "gl-4",
+        type: "error_spike",
         severity: "warning",
         name: "Refund Processing Delay",
         automationName: "Refund Request → Process → Notify Customer",
@@ -137,6 +148,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "gl-5",
+        type: "high_error_rate",
         severity: "warning",
         name: "Missing Error Handler on Shipping Label",
         automationName: "Order Packed → Generate Shipping Label → Update Tracking",
@@ -147,6 +159,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "gl-6",
+        type: "zombie_automation",
         severity: "info",
         name: "Unused Abandoned Cart Scenario",
         automationName: "Abandoned Cart → Email Reminder (Draft)",
@@ -157,6 +170,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "gl-7",
+        type: null,
         severity: "info",
         name: "Duplicate Inventory Check",
         automationName: "Hourly Stock Check → Alert if Low",
@@ -180,6 +194,7 @@ export const profiles: AutomationProfile[] = [
     issues: [
       {
         id: "cs-1",
+        type: "error_spike",
         severity: "warning",
         name: "Teachable API Rate Limit Approaching",
         automationName: "New Enrollment → Drip Content Schedule",
@@ -190,6 +205,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "cs-2",
+        type: "zombie_automation",
         severity: "info",
         name: "Legacy Welcome Email Scenario",
         automationName: "New Student → Welcome Email (Old Template)",
@@ -200,6 +216,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "cs-3",
+        type: null,
         severity: "info",
         name: "Community Access Granted Twice",
         automationName: "Payment → Grant Circle Community Access",
@@ -223,6 +240,7 @@ export const profiles: AutomationProfile[] = [
     issues: [
       {
         id: "if-1",
+        type: null,
         severity: "critical",
         name: "Self-Hosted Instance Memory Exhaustion",
         automationName: "All Workflows — n8n Worker Process",
@@ -233,6 +251,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "if-2",
+        type: "silent_failure",
         severity: "critical",
         name: "Webhook Tunnel Expired",
         automationName: "Inbound Webhooks — GitHub, PagerDuty, Stripe",
@@ -243,6 +262,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "if-3",
+        type: null,
         severity: "critical",
         name: "PostgreSQL Connection Pool Saturated",
         automationName: "All Workflows — Database Backend",
@@ -253,6 +273,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "if-4",
+        type: "credential_expiration",
         severity: "warning",
         name: "Credential Encryption Key Rotation Overdue",
         automationName: "Security — N8N_ENCRYPTION_KEY",
@@ -263,6 +284,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "if-5",
+        type: null,
         severity: "warning",
         name: "Deprecated HTTP Request Node v1",
         automationName: "8 Workflows Using Legacy Nodes",
@@ -273,6 +295,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "if-6",
+        type: "zombie_automation",
         severity: "info",
         name: "Unused Community Node Installed",
         automationName: "n8n-nodes-carbonejs — Document Generation",
@@ -283,6 +306,7 @@ export const profiles: AutomationProfile[] = [
       },
       {
         id: "if-7",
+        type: null,
         severity: "info",
         name: "Execution Data Retention Unbounded",
         automationName: "n8n Database — Execution History",

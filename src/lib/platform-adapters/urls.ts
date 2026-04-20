@@ -4,10 +4,15 @@ export interface ConnectionUrlContext {
   platform: Platform;
   zone?: string | null;
   instanceUrl?: string | null;
+  teamId?: number | null;
 }
 
-export function buildMakeScenarioUrl(zone: string, externalId: string): string {
-  return `https://${zone}.make.com/scenarios/${externalId}`;
+export function buildMakeScenarioUrl(
+  zone: string,
+  teamId: number,
+  externalId: string,
+): string {
+  return `https://${zone}.make.com/${teamId}/scenarios/${externalId}`;
 }
 
 export function buildN8nWorkflowUrl(instanceUrl: string, externalId: string): string {
@@ -21,8 +26,8 @@ export function buildScenarioUrl(
 ): string | undefined {
   if (!externalId) return undefined;
 
-  if (connection.platform === "make" && connection.zone) {
-    return buildMakeScenarioUrl(connection.zone, externalId);
+  if (connection.platform === "make" && connection.zone && connection.teamId) {
+    return buildMakeScenarioUrl(connection.zone, connection.teamId, externalId);
   }
 
   if (connection.platform === "n8n" && connection.instanceUrl) {

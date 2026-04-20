@@ -95,6 +95,17 @@ export const markAllReadSchema = z.object({
   workspaceId: z.string().uuid("Invalid workspace ID"),
 });
 
+// --- Dismiss issues ---
+
+export const dismissIssuesSchema = z.object({
+  issueIds: z
+    .array(z.string().uuid("Invalid issue ID"))
+    .min(1, "At least one issue ID is required")
+    .max(100, "Cannot dismiss more than 100 issues at once"),
+});
+
+export type DismissIssuesInput = z.infer<typeof dismissIssuesSchema>;
+
 // --- Helper to format Zod errors ---
 
 export function formatZodErrors(error: z.ZodError): string {

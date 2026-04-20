@@ -281,6 +281,7 @@ async function syncIssues(
     .filter((issue) => !existingByKey.has(`${issue.name}::${issue.automationName}`))
     .map((issue) => ({
       profile_id: profileId,
+      type: issue.type,
       severity: issue.severity,
       name: issue.name,
       automation_name: issue.automationName,

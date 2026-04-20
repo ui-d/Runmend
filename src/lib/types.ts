@@ -1,3 +1,5 @@
+import type { IssueType } from "@/lib/detectors";
+
 export type IssueSeverity = "critical" | "warning" | "info";
 
 export type HealthStatus = "critical" | "warning" | "stable" | "excellent";
@@ -6,12 +8,14 @@ export type Platform = "make" | "n8n";
 
 export interface AutomationIssue {
   id: string;
+  type: IssueType | null;
   severity: IssueSeverity;
   name: string;
   automationName: string;
   businessImpact: string;
   recommendation: string;
   scenarioUrl?: string;
+  externalId?: string;
 }
 
 export interface AutomationProfile {

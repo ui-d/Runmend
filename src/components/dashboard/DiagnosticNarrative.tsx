@@ -41,7 +41,7 @@ export function DiagnosticNarrative({
   return (
     <Card>
       <CardContent className="p-6">
-        <div className="flex items-center justify-between gap-2 mb-5">
+        <div className="flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles className="h-4 w-4 text-muted-foreground shrink-0" />
             <h2 className="text-sm font-medium">AI Diagnostic</h2>
@@ -87,7 +87,7 @@ export function DiagnosticNarrative({
         )}
 
         {narrative && !isLoading && (
-          <div className="space-y-5">
+          <div className="space-y-4">
             <OverallSummary text={narrative.overallHealth} />
             <CriticalFinding text={narrative.mostDangerousIssue} />
             <Recommendations text={narrative.recommendations} />
@@ -112,7 +112,7 @@ function HealthPill({ status }: { status: HealthStatus }) {
 function OverallSummary({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
   const trimmed = text.trim();
-  const isLong = trimmed.length > 160;
+  const isLong = trimmed.length > 220;
 
   return (
     <div>
@@ -185,7 +185,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
         <Skeleton className="h-3 w-20 mb-2" />
         <Skeleton className="h-4 w-full mb-2" />

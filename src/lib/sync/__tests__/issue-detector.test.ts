@@ -289,4 +289,65 @@ describe("detectIssues", () => {
       expect(issues.find((i) => i.name === "Consecutive failures")).toBeDefined();
     });
   });
+
+  describe("detector type stamping", () => {
+    it("stamps silent_failure type", () => {
+      const auto = makeAutomation({ id: "a1" });
+      const oldExec = makeExecution("a1", { started_at: daysAgo(10) });
+      const issues = detectIssues([auto], [oldExec], makeConnection());
+      const found = issues.find((i) => i.name === "Silent failure detected");
+      expect(found?.type).toBe("silent_failure");
+    });
+
+    it("stamps high_error_rate type", () => {
+      const auto = makeAutomation({ id: "a1" });
+      const execs = [
+        makeExecution("a1", { started_at: hoursAgo(1), status: "error" }),
+        makeExecution("a1", { started_at: hoursAgo(2), status: "error" }),
+        makeExecution("a1", { started_at: hoursAgo(3), status: "success" }),
+      ];
+      const issues = detectIssues([auto], execs, makeConnection());
+      const found = issues.find((i) => i.name === "High error rate");
+      expect(found?.type).toBe("high_error_rate");
+    });
+
+    it("stamps consecutive_failures type", () => {
+      const auto = makeAutomation({ id: "a1" });
+      const execs = Array.from({ length: 6 }, (_, i) =>
+        makeExecution("a1", {
+          started_at: hoursAgo(i + 1),
+          status: "error",
+        })
+      );
+      const issues = detectIssues([auto], execs, makeConnection());
+      const found = issues.find((i) => i.name === "Consecutive failures");
+      expect(found?.type).toBe("consecutive_failures");
+    });
+
+    it("stamps zombie_automation type", () => {
+      const auto = makeAutomation({ id: "a1" });
+      const issues = detectIssues([auto], [], makeConnection());
+      const found = issues.find((i) => i.name === "Zombie automation");
+      expect(found?.type).toBe("zombie_automation");
+    });
+
+    it("stamps credential_expiration type for both warn and critical variants", () => {
+      const expiringSoon = detectIssues(
+        [],
+        [],
+        makeConnection({ token_expires_at: daysFromNow(3) })
+      );
+      const expired = detectIssues(
+        [],
+        [],
+        makeConnection({ token_expires_at: daysAgo(1) })
+      );
+      expect(
+        expiringSoon.find((i) => i.name === "Credential expiring soon")?.type
+      ).toBe("credential_expiration");
+      expect(
+        expired.find((i) => i.name === "Credentials expired")?.type
+      ).toBe("credential_expiration");
+    });
+  });
 });

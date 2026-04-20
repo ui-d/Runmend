@@ -8,7 +8,7 @@
 
 **Automation platforms don't tell you when your workflows fail silently.**
 
-Businesses increasingly rely on workflow automation tools (Zapier, Make.com, n8n) to connect their SaaS stack — syncing CRM entries, processing payments, sending notifications, onboarding customers. But these platforms have a critical blind spot: when an automation stops firing, credentials expire, or a webhook goes dead, there is often **no alert**. The workflow simply stops working.
+Businesses increasingly rely on workflow automation tools (Make.com, n8n, and similar) to connect their SaaS stack — syncing CRM entries, processing payments, sending notifications, onboarding customers. But these platforms have a critical blind spot: when an automation stops firing, credentials expire, or a webhook goes dead, there is often **no alert**. The workflow simply stops working.
 
 **The consequences are real:**
 - Invoices stop generating (revenue leakage)
@@ -23,7 +23,7 @@ Businesses increasingly rely on workflow automation tools (Zapier, Make.com, n8n
 - These are marketing-facing figures used on the landing page; independent validation is recommended
 
 **Who feels this pain most:**
-- Marketing agencies managing client automations (tens to hundreds of Zaps)
+- Marketing agencies managing client automations (tens to hundreds of scenarios/workflows)
 - E-commerce operators with order/fulfillment/notification chains
 - SaaS/DevOps teams running self-hosted n8n with infrastructure concerns
 - Any team where automation is critical but not someone's full-time job
@@ -36,11 +36,11 @@ Businesses increasingly rely on workflow automation tools (Zapier, Make.com, n8n
 
 ### Core Value Loop
 
-1. **Connect** — User links their Zapier, Make.com, or n8n account (read-only API access)
+1. **Connect** — User links their Make.com or n8n account (read-only API access)
 2. **Sync** — Runmend pulls automation metadata and execution logs
 3. **Analyze** — Health score calculated (0–100), issues detected by 6 rule-based detectors
 4. **Diagnose** — Claude AI generates a natural-language report: what's broken, why it matters, how to fix it
-5. **Monitor** — Scheduled syncs + notifications alert users to new problems
+5. **Monitor** — Scheduled syncs (Vercel Cron, every 15 minutes) + notifications alert users to new problems
 
 ### Feature Set
 
@@ -62,17 +62,18 @@ Weighted formula:
 | Zombie Automation | Info | Active but 0 executions ever in 30 days |
 
 **AI Diagnostic Reports**
-- Powered by Claude (Anthropic API)
+- Powered by Claude (Anthropic API, Sonnet model, configurable via `CLAUDE_MODEL`)
 - Generates 3-section report: Overall Health Assessment, Most Dangerous Issue, 3 Prioritized Recommendations
 - Reports are persisted with history for trend tracking
 - Regenerate on demand
+- Fallback narratives included for the 4 demo profiles when `ANTHROPIC_API_KEY` is unset
 
 **Platform Integrations**
 | Platform | Auth Method | Capabilities |
 |----------|-------------|--------------|
-| Make.com | API token | Full: fetch scenarios (paginated, up to 5000), execution logs, connection test. Multi-region (us1, eu1, eu2). |
-| n8n | API key + instance URL | Full: fetch workflows (up to 250), execution logs with cursor pagination. Self-hosted support. |
-| Zapier | Webhook-based | Partial: users add a webhook action to each Zap; automations auto-discovered from incoming payloads. No bulk API access (Zapier Partner Program OAuth planned for future). |
+| Make.com | API token + zone + optional team_id | Fetch scenarios (paginated, up to 5000), execution logs, connection test. Multi-zone support (us1, eu1, eu2, etc.) with team-scoped access. |
+| n8n | API key + instance URL | Fetch workflows (up to 250), execution logs with cursor pagination. Self-hosted support. |
+| Zapier | — | **Removed from v1** (unstable Partner Program API). Schema stubs remain for future re-introduction. |
 
 **Notifications**
 - In-app notification bell with unread count
@@ -84,6 +85,7 @@ Weighted formula:
 - Team-based: workspace with owner/admin/member roles
 - Row-Level Security (RLS) at database level — full tenant isolation
 - Multiple profiles per workspace (e.g., one per client for agencies)
+- Dedicated profiles page with search, filters, and table view
 
 ---
 
@@ -121,56 +123,76 @@ Weighted formula:
 | Payments | Stripe (subscriptions, checkout, portal, webhooks) |
 | Email | Resend |
 | Analytics | PostHog |
+| Error Tracking | Sentry (`@sentry/nextjs`) |
 | Styling | Tailwind CSS + shadcn/ui + Lucide icons |
-| Deployment target | Vercel (serverless) |
+| Testing | Vitest + Playwright |
+| CI/CD | GitHub Actions → Vercel |
+| Deployment target | Vercel (serverless + Vercel Cron for scheduled jobs) |
 
-### Database Schema (12 migration files)
+### Database Schema (16 migration files)
 Core tables: `users`, `workspaces`, `workspace_members`, `automation_profiles`, `automation_issues`, `platform_connections`, `automations`, `execution_logs`, `diagnostic_reports`, `audit_schedules`, `notifications`, `notification_preferences`, `subscriptions`.
 
-All tables have RLS policies enforced via `get_user_workspace_ids()` helper functions. Credentials are encrypted at rest with AES-256-GCM before storage.
+Recent additions: performance indexes, batch RPC functions (`update_automation_stats`, `update_profile_scenario_count`), execution log retention, pg_cron sync job, Make.com zone + team_id columns, Zapier webhook token hashing (retained for potential future use).
+
+All tables have RLS policies enforced via `get_user_workspace_ids()` / `get_user_admin_workspace_ids()` helper functions. Credentials are encrypted at rest with AES-256-GCM before storage.
 
 ### Security Measures
-- AES-256-GCM encryption for stored platform credentials
-- Webhook token hashing (SHA-256) for Zapier tokens
-- Zod schema validation on all API inputs
-- Workspace membership checks (defense-in-depth beyond RLS)
+- AES-256-GCM encryption for stored platform credentials (`ENCRYPTION_KEY` required)
+- Zod schema validation on all API inputs (centralized in `src/lib/validation/schemas.ts`)
+- Workspace membership checks (defense-in-depth beyond RLS) via `getWorkspaceMembership()`
 - OAuth redirect validation (allowlist-based)
 - Stripe webhook signature verification
-- Replay protection on Zapier webhooks
+- `CRON_SECRET` bearer auth on the Vercel Cron endpoint
 - Exponential backoff retry with jitter on all external API calls
+- Security headers configured at the framework level
+- Critical env-var validation on boot (`src/lib/env.ts`)
 
 ### API Surface
-14 API endpoints covering: diagnostics, connections (CRUD + test), sync trigger, notifications (list, read, bulk-read), schedules (CRUD), billing (checkout, portal, webhook), and Zapier webhook receiver.
+API endpoints organized under `src/app/api/`: diagnostics, connections (CRUD + test), sync trigger, cron (scheduled sync), notifications (list, read, bulk-read), schedules (CRUD), and billing (checkout, portal, webhook).
+
+### Routing
+- `src/app/(auth)/` — login, signup, forgot/reset password, OAuth callback
+- `src/app/app/[workspaceSlug]/` — authenticated workspace area (dashboard, profiles, connections, billing, settings)
+- `src/app/dashboard/[profileId]/` — public demo dashboards (4 hardcoded profiles, no auth)
+
+### Test Coverage
+78 tests across 7 files (~65% coverage), covering:
+- Sync engine: `health-calculator`, `issue-detector`
+- Platform adapters: `make`, `n8n`
+- Validation: Zod schemas for all API inputs
+- Crypto: AES-256-GCM round-trip + SHA-256 hashing
+- API routes: cron sync endpoint
 
 ---
 
 ## 5. Current Development State
 
-### What's Built (8 phases complete + production hardening)
-- Full auth flow (email/password + Google/GitHub OAuth)
+### What's Built (Phases 1–10 complete)
+- Full auth flow (email/password + OAuth callback handling)
 - Multi-tenant workspace system with RBAC
-- Platform connection management with encrypted credential storage
-- Sync engine: fetch automations, calculate health scores, detect issues
+- Platform connection management with encrypted credential storage (Make.com zone + team_id, n8n instance URL)
+- Sync engine: fetch automations, calculate health scores, detect issues, bulk upserts via RPC
 - AI diagnostic report generation with Claude
-- Notification system (in-app + email)
+- Notification system (in-app + email via Resend)
 - Stripe billing (4 tiers, checkout, portal, webhooks, plan limit enforcement)
 - Onboarding flow (auto-workspace creation, guided setup)
-- 4 demo profiles with pre-generated data for prospects to explore without signup
-- Production hardening: security fixes, bulk DB operations, retry logic, input validation
+- 4 demo profiles (Coastal Content Agency, GreenLeaf Commerce, Creator Stack, InfraFlow DevOps) for prospects to explore without signup
+- Dedicated profiles page with search, filters, and table view
+- **Phase 9 — Production hardening:** input validation, workspace auth, redirect protection, bulk DB ops, pagination, retry w/ backoff
+- **Phase 10 — Ship readiness:** scheduled sync via Vercel Cron (`/api/cron/sync`, every 15 min), Vitest test suite (78 tests, ~65% coverage), Sentry error tracking, security headers, GitHub Actions CI, SEO metadata, favicon, robots.txt, sitemap
+- Make.com zone selector + team_id support, improved sync/diagnostics UX
 
-### What's NOT Built
-- **Test suite: zero tests exist.** No unit, integration, or E2E tests. No test framework configured.
-- **Scheduled sync:** Supabase Edge Function designed but not deployed. Currently manual-trigger only.
-- **Zapier OAuth:** Webhook-based only. Full OAuth requires Zapier Partner Program access.
-- **Error tracking/observability:** No Sentry, no structured logging (uses console.error).
-- **CI/CD pipeline:** No GitHub Actions or automated deployment workflows.
-- **Self-hosting support:** No Docker configuration. Vercel-only deployment.
-- **Diagnostics limit enforcement:** Defined in code but not enforced at the API endpoint.
-- **Rate limiting beyond plan limits:** No per-IP or per-user rate limiting on API routes.
+### What's NOT Built / Known Gaps
+- **Zapier integration:** Removed from v1 (unstable Partner Program API). Not on near-term roadmap without OAuth access.
+- **Diagnostics-per-month limit enforcement:** Defined in plan config but not enforced at the API endpoint.
+- **Per-IP / per-user rate limiting:** Beyond plan-based quotas, no infrastructure-level rate limiting on API routes.
+- **Self-hosting support:** No Docker config; Vercel-only deployment.
+- **Deeper observability:** Sentry is wired up, but structured logging beyond `console.error` is not standardized.
+- **Production security audit:** Not yet performed by a third party.
 
 ### Deployment Readiness
-- **Demo/staging:** Ready now. Demo profiles work without auth or external services.
-- **Production:** Not ready. Missing tests, observability, scheduled sync, and security audit.
+- **Demo/staging:** Ready. Demo profiles work without auth or external services.
+- **Production:** Deployable. Requires env-var setup (Supabase, Stripe keys + webhook, `ENCRYPTION_KEY`, `CRON_SECRET`, optional Sentry/Anthropic/Resend). Vercel Pro required for the cron job.
 
 ---
 
@@ -187,7 +209,7 @@ All tables have RLS policies enforced via `get_user_workspace_ids()` helper func
 - **Consulting/agencies:** Some agencies manually audit client automations — Runmend automates this.
 
 ### Differentiation
-- **Cross-platform:** Single dashboard for Zapier + Make.com + n8n (vs platform-specific tools)
+- **Cross-platform:** Single dashboard for Make.com + n8n today; designed to extend to additional platforms (Zapier re-entry, Pipedream, Workato) as APIs allow
 - **AI diagnostics:** Natural language reports explaining what's broken, why it matters, how to fix it
 - **Silent failure detection:** Purpose-built rules for automation-specific failure modes
 - **Agency use case:** Multi-profile workspaces designed for agencies managing client automations
@@ -197,23 +219,25 @@ All tables have RLS policies enforced via `get_user_workspace_ids()` helper func
 ## 7. Risks & Open Questions
 
 ### Technical Risks
-1. **Zapier integration is limited.** Webhook-based monitoring requires users to manually add a webhook action to each Zap. This creates friction and doesn't scale. Full API access requires Zapier Partner Program approval (uncertain timeline, uncertain approval).
-2. **No tests.** The entire codebase has zero automated tests. Any production deployment is high-risk without at least critical-path coverage.
-3. **Scheduled sync not deployed.** Users currently must manually trigger syncs. The value proposition of "monitoring" requires automated, periodic health checks.
-4. **Single-developer codebase.** Bus factor of 1. No CI/CD, no code review process.
+1. **Narrower platform coverage than originally planned.** Zapier was removed from v1 due to API limitations. Platform breadth is a core differentiation claim, and we're currently at 2 (Make.com, n8n). Re-introducing Zapier or adding another platform (Pipedream, Workato) is important for the cross-platform narrative.
+2. **Test coverage is decent but not comprehensive.** ~65% with 78 tests. No E2E test runs in CI yet; Playwright is installed but journeys aren't codified.
+3. **Single-developer codebase.** Bus factor of 1. CI/CD exists but there is no code review process.
+4. **Vercel lock-in.** Cron, edge, and deployment flows assume Vercel. No Docker path.
 
 ### Business Risks
-1. **Platform dependency.** Zapier, Make.com, or n8n could build equivalent monitoring features natively, eliminating Runmend's value for that platform.
+1. **Platform dependency.** Make.com or n8n could build equivalent monitoring features natively, eliminating Runmend's value for that platform.
 2. **Market size uncertainty.** The pain is real but may not be large enough for a standalone SaaS. Many users have <10 automations and can monitor manually.
 3. **Pricing validation.** $19–$49/mo pricing is assumed, not validated. Willingness-to-pay for monitoring (vs. the automation platform itself) is unproven.
 4. **Agency vs. individual.** The strongest use case (agencies managing client automations) is a narrow market. Individual users may not pay for monitoring they can do manually.
 5. **AI cost scaling.** If diagnostic reports become popular, Claude API costs scale with usage. Current pricing assumes low per-report cost, but complex reports with large execution log context could be more expensive.
+6. **Cross-platform claim is weaker without Zapier.** The initial positioning emphasized Zapier + Make.com + n8n. With Zapier gone, the "cross-platform" story needs rework or a third platform.
 
 ### Go-to-Market Questions
 - What's the primary acquisition channel? (Content marketing? Platform marketplaces? Agency partnerships?)
 - Is the demo-first approach (4 profiles, no signup required) effective for conversion?
 - Should Enterprise tier be self-serve or sales-led?
-- Is there a partnership path with Zapier/Make.com (marketplace listing, integration partner program)?
+- Is there a partnership path with Make.com or n8n (marketplace listing, integration partner program)?
+- What does the next platform integration look like — re-enter Zapier when OAuth is feasible, or add Pipedream / Workato first?
 
 ---
 
@@ -226,7 +250,7 @@ All tables have RLS policies enforced via `get_user_workspace_ids()` helper func
 | Users will pay $19–49/mo for monitoring | Pricing page A/B tests, early customer feedback |
 | AI diagnostics are a meaningful differentiator vs. rule-based alerts alone | Feature usage tracking (do users regenerate reports? read them?) |
 | Agencies are the primary buyer | Segment analysis of early signups (individual vs. team workspaces) |
-| Zapier webhook-based monitoring is acceptable | User feedback on setup friction, drop-off rate at connection step |
+| Two-platform coverage (Make.com + n8n) is enough to sell a "cross-platform" story | Win/loss interviews, tracking requests for other platforms |
 | Cross-platform monitoring matters (vs. single-platform) | Percentage of users connecting 2+ platforms |
 
 ### Metrics to Track Post-Launch
@@ -241,16 +265,16 @@ All tables have RLS policies enforced via `get_user_workspace_ids()` helper func
 
 ## 9. Summary for Validation
 
-**Runmend is an AI-powered monitoring layer for business automation platforms (Zapier, Make.com, n8n).** It detects silent failures, credential expirations, and workflow health degradation that the platforms themselves don't surface — then generates AI diagnostic reports with prioritized fix recommendations.
+**Runmend is an AI-powered monitoring layer for business automation platforms (Make.com and n8n today; Zapier deferred).** It detects silent failures, credential expirations, and workflow health degradation that the platforms themselves don't surface — then generates AI diagnostic reports with prioritized fix recommendations.
 
-**Current state:** Feature-complete MVP with freemium billing, multi-tenant workspaces, 3 platform integrations, and AI diagnostics. No tests, no scheduled sync, no production deployment yet. Solo developer.
+**Current state:** Feature-complete MVP deployed-ready. Freemium billing, multi-tenant workspaces, 2 active platform integrations, AI diagnostics, scheduled sync (Vercel Cron, 15 min), ~65% test coverage (78 tests), Sentry, GitHub Actions CI. Solo developer.
 
 **Business model:** Freemium SaaS ($0 / $19 / $49 / custom per month) gated by number of monitored profiles, daily sync frequency, and monthly AI diagnostics.
 
 **Core bet:** Automation reliability is an underserved pain point, and the combination of cross-platform monitoring + AI diagnostics creates enough value to justify a standalone subscription.
 
-**Biggest risks:** Platform dependency (incumbents could build this), Zapier integration friction (webhook-only), market size for a monitoring-only tool, and zero test coverage for production readiness.
+**Biggest risks:** Platform dependency (incumbents could build this natively), narrower-than-planned platform coverage (Zapier deferred), pricing validation, and market size for a monitoring-only tool aimed primarily at agencies.
 
 ---
 
-*Generated from codebase analysis on 2026-04-12. For the most current state, refer to the repository directly.*
+*Generated from codebase analysis on 2026-04-17 (Phase 10 ship-readiness complete, 16 migrations, 78 tests, Vercel Cron live). For the most current state, refer to the repository directly.*

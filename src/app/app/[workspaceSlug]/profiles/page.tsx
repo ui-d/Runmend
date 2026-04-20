@@ -16,7 +16,6 @@ import {
   BarChart3,
   AlertTriangle,
   Search,
-  ArrowUpDown,
 } from "lucide-react";
 import { ProfilesFilter } from "@/components/app/ProfilesFilter";
 

@@ -158,6 +158,7 @@ export type Database = {
           business_impact: string;
           recommendation: string;
           status: "open" | "acknowledged" | "resolved" | "dismissed";
+          type: string | null;
           resolved_at: string | null;
           created_at: string;
           updated_at: string;
@@ -171,6 +172,7 @@ export type Database = {
           business_impact: string;
           recommendation: string;
           status?: "open" | "acknowledged" | "resolved" | "dismissed";
+          type?: string | null;
           resolved_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -182,6 +184,7 @@ export type Database = {
           business_impact?: string;
           recommendation?: string;
           status?: "open" | "acknowledged" | "resolved" | "dismissed";
+          type?: string | null;
           resolved_at?: string | null;
           updated_at?: string;
         };

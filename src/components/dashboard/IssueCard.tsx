@@ -1,9 +1,18 @@
-import { AlertTriangle, AlertCircle, Info, Workflow, ExternalLink } from "lucide-react";
+import {
+  AlertTriangle,
+  AlertCircle,
+  Info,
+  Workflow,
+  ExternalLink,
+  ChevronRight,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AutomationIssue, getSeverityColorClasses } from "@/lib/types";
 
 interface IssueCardProps {
   issue: AutomationIssue;
+  index?: number;
+  collapsedByDefault?: boolean;
 }
 
 const severityIcons = {
@@ -12,18 +21,26 @@ const severityIcons = {
   info: Info,
 } as const;
 
-export function IssueCard({ issue }: IssueCardProps) {
+export function IssueCard({ issue, index, collapsedByDefault }: IssueCardProps) {
   const colors = getSeverityColorClasses(issue.severity);
   const Icon = severityIcons[issue.severity];
+  const showIndex = typeof index === "number";
 
   return (
     <Card className={`border-l-4 ${colors.border}`}>
-      <CardContent className="p-5">
+      <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <Icon className={`h-5 w-5 mt-0.5 shrink-0 ${colors.text}`} />
-          <div className="space-y-3 min-w-0 flex-1">
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm leading-tight">{issue.name}</h4>
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            <Icon className={`h-5 w-5 ${colors.text}`} />
+            {showIndex && (
+              <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/60">
+                {String(index! + 1).padStart(2, "0")}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <div className="space-y-1.5">
+              <h4 className="text-sm font-semibold leading-tight">{issue.name}</h4>
               <WorkflowChip
                 name={issue.automationName}
                 url={issue.scenarioUrl}
@@ -31,14 +48,22 @@ export function IssueCard({ issue }: IssueCardProps) {
               />
             </div>
 
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {issue.businessImpact}
             </p>
 
-            <div className={`text-sm rounded-md p-3 ${colors.bg}`}>
-              <span className="font-medium">Recommendation: </span>
-              {issue.recommendation}
-            </div>
+            <details
+              className="group text-sm"
+              open={!collapsedByDefault}
+            >
+              <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">
+                <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
+                Recommendation
+              </summary>
+              <div className={`mt-2 rounded-md p-3 ${colors.bg}`}>
+                {issue.recommendation}
+              </div>
+            </details>
           </div>
         </div>
       </CardContent>
