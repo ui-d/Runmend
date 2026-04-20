@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -17,18 +17,27 @@ interface ConnectN8nDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
+  defaultDisplayName?: string;
+  allowRenameAccount?: boolean;
 }
 
 export function ConnectN8nDialog({
   open,
   onOpenChange,
   workspaceId,
+  defaultDisplayName = "Primary",
+  allowRenameAccount = false,
 }: ConnectN8nDialogProps) {
   const [instanceUrl, setInstanceUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [displayName, setDisplayName] = useState(defaultDisplayName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (open) setDisplayName(defaultDisplayName);
+  }, [open, defaultDisplayName]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +53,7 @@ export function ConnectN8nDialog({
           platform: "n8n",
           apiKey,
           instanceUrl,
+          displayName: displayName.trim() || "Primary",
         }),
       });
 
@@ -75,6 +85,24 @@ export function ConnectN8nDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {allowRenameAccount && (
+            <div className="space-y-2">
+              <Label htmlFor="n8nDisplayName">Account label</Label>
+              <Input
+                id="n8nDisplayName"
+                type="text"
+                placeholder="e.g. Client A, Staging"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                maxLength={60}
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown on the connections page so you can tell multiple instances
+                apart.
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="instanceUrl">Instance URL</Label>
             <Input

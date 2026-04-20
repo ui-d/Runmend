@@ -14,6 +14,11 @@ export const connectionCreateSchema = z.object({
       error: "Invalid zone",
     })
     .optional(),
+  displayName: z
+    .string()
+    .min(1, "Account label is required")
+    .max(60, "Account label must be 60 characters or fewer")
+    .optional(),
 });
 
 export type ConnectionCreateInput = z.infer<typeof connectionCreateSchema>;

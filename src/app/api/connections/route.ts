@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { workspaceId, platform, apiKey, instanceUrl, zone } = parsed.data;
+    const { workspaceId, platform, apiKey, instanceUrl, zone, displayName } =
+      parsed.data;
 
     const membership = await getWorkspaceMembership(supabase, workspaceId);
     if (!membership) {
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
         {
           workspace_id: workspaceId,
           platform,
+          display_name: displayName?.trim() || "Primary",
           auth_type: "api_key" as const,
           api_key_encrypted: encryptedApiKey,
           instance_url: instanceUrl || null,
@@ -55,8 +57,9 @@ export async function POST(request: NextRequest) {
           team_id: teamId,
           status: testResult.ok ? "active" : "error",
           error_message: testResult.error || null,
+          last_tested_at: new Date().toISOString(),
         },
-        { onConflict: "workspace_id,platform" }
+        { onConflict: "workspace_id,platform,display_name" }
       )
       .select()
       .single();

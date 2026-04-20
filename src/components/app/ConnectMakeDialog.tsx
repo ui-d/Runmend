@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -17,18 +17,27 @@ interface ConnectMakeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
+  defaultDisplayName?: string;
+  allowRenameAccount?: boolean;
 }
 
 export function ConnectMakeDialog({
   open,
   onOpenChange,
   workspaceId,
+  defaultDisplayName = "Primary",
+  allowRenameAccount = false,
 }: ConnectMakeDialogProps) {
   const [apiKey, setApiKey] = useState("");
   const [zone, setZone] = useState("us1");
+  const [displayName, setDisplayName] = useState(defaultDisplayName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (open) setDisplayName(defaultDisplayName);
+  }, [open, defaultDisplayName]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +53,7 @@ export function ConnectMakeDialog({
           platform: "make",
           apiKey,
           zone,
+          displayName: displayName.trim() || "Primary",
         }),
       });
 
@@ -74,6 +84,24 @@ export function ConnectMakeDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {allowRenameAccount && (
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Account label</Label>
+              <Input
+                id="displayName"
+                type="text"
+                placeholder="e.g. Client A, Agency sandbox"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                maxLength={60}
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown on the connections page so you can tell multiple accounts
+                apart.
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="apiKey">API Token</Label>
             <Input

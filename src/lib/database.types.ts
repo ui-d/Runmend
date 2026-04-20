@@ -227,6 +227,73 @@ export type Database = {
           },
         ]
       }
+      connection_interest: {
+        Row: {
+          created_at: string
+          id: string
+          platform_slug: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform_slug: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform_slug?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connection_interest_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connection_requests: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          platform_slug: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          platform_slug: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          platform_slug?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connection_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diagnostic_reports: {
         Row: {
           created_at: string
@@ -432,10 +499,12 @@ export type Database = {
           auth_type: string
           created_at: string
           credentials_vault_id: string | null
+          display_name: string
           error_message: string | null
           id: string
           instance_url: string | null
           last_synced_at: string | null
+          last_tested_at: string | null
           platform: string
           refresh_token_encrypted: string | null
           status: string
@@ -451,10 +520,12 @@ export type Database = {
           auth_type: string
           created_at?: string
           credentials_vault_id?: string | null
+          display_name?: string
           error_message?: string | null
           id?: string
           instance_url?: string | null
           last_synced_at?: string | null
+          last_tested_at?: string | null
           platform: string
           refresh_token_encrypted?: string | null
           status?: string
@@ -470,10 +541,12 @@ export type Database = {
           auth_type?: string
           created_at?: string
           credentials_vault_id?: string | null
+          display_name?: string
           error_message?: string | null
           id?: string
           instance_url?: string | null
           last_synced_at?: string | null
+          last_tested_at?: string | null
           platform?: string
           refresh_token_encrypted?: string | null
           status?: string
