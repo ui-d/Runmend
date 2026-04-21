@@ -154,6 +154,67 @@ describe("N8nAdapter", () => {
     });
   });
 
+  describe("fetchExecutionLogs paginates + stops", () => {
+    it("paginates through multiple pages and stops at empty cursor", async () => {
+      mockFetch
+        .mockResolvedValueOnce(
+          jsonResponse({
+            data: [
+              {
+                id: "ex-1",
+                workflowId: "w-1",
+                finished: true,
+                stoppedAt: "2026-01-01",
+                startedAt: "2026-01-01",
+              },
+            ],
+            nextCursor: "page2",
+          }),
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({
+            data: [
+              {
+                id: "ex-2",
+                workflowId: "w-1",
+                finished: false,
+                startedAt: "2026-01-01",
+              },
+            ],
+            nextCursor: null,
+          }),
+        );
+      const result = await adapter.fetchExecutionLogs(new Date("2025-01-01"));
+      expect(result).toHaveLength(2);
+      expect(result[1]!.status).toBe("running");
+    });
+
+    it("breaks on error response", async () => {
+      mockFetch.mockResolvedValueOnce(textResponse("boom", 500));
+      const result = await adapter.fetchExecutionLogs(new Date("2025-01-01"));
+      expect(result).toEqual([]);
+    });
+
+    it("uses createdAt when startedAt missing", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            {
+              id: "ex-1",
+              workflowId: "w-1",
+              finished: true,
+              stoppedAt: "2026-01-01",
+              createdAt: "2026-01-01",
+            },
+          ],
+          nextCursor: null,
+        }),
+      );
+      const result = await adapter.fetchExecutionLogs(new Date("2025-01-01"));
+      expect(result[0]!.startedAt).toBe("2026-01-01");
+    });
+  });
+
   describe("instance URL normalization", () => {
     it("strips trailing slash", () => {
       const trailingSlash = new N8nAdapter("key", "https://n8n.example.com/");
