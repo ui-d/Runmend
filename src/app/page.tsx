@@ -1,9 +1,13 @@
 import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
-import { DashboardPreview } from "@/components/landing/DashboardPreview";
+import { LiveMonitor } from "@/components/landing/LiveMonitor";
+import { Detectors } from "@/components/landing/Detectors";
+import { DiagnosticReport } from "@/components/landing/DiagnosticReport";
+import { DashboardTour } from "@/components/landing/DashboardTour";
+import { PlatformSync } from "@/components/landing/PlatformSync";
 import { Stats } from "@/components/landing/Stats";
 import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Features } from "@/components/landing/Features";
+import { Pricing } from "@/components/landing/Pricing";
 import { ProfileCard } from "@/components/landing/ProfileCard";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
@@ -16,10 +20,14 @@ export default function Home() {
     <main className="min-h-screen">
       <Navbar />
       <Hero />
-      <DashboardPreview />
+      <LiveMonitor />
+      <Detectors />
+      <DiagnosticReport />
+      <DashboardTour />
+      <PlatformSync />
       <Stats />
       <HowItWorks />
-      <Features />
+      <Pricing />
 
       <section id="demo" className="max-w-5xl mx-auto px-4 py-20">
         <div className="text-center mb-12">

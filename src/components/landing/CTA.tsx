@@ -9,8 +9,8 @@ export function CTA() {
           Stop firefighting. Start monitoring.
         </h2>
         <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-          Connect your client&apos;s Make.com or n8n instance and get your
-          first health report in under 2 minutes.
+          Start in under a minute. The free tier watches 1 profile and ships
+          3 Claude-powered diagnostics a month — no credit card, no catch.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
           <Link

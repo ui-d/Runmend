@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabase-mock";
 import { makeRequest, readJson } from "@/test/next-mocks";
-import { makeMember, makeNotification, makeUser, TEST_UUID } from "@/test/factories";
+import {
+  makeMember,
+  makeNotification,
+  makeUser,
+  TEST_UUID,
+  TEST_NOTIFICATION_ID,
+} from "@/test/factories";
 
 let mock: SupabaseMock;
 
@@ -72,36 +78,44 @@ describe("GET /api/notifications", () => {
 });
 
 describe("PATCH /api/notifications/[id]/read", () => {
+  const ctx = { params: Promise.resolve({ notificationId: TEST_NOTIFICATION_ID }) };
+  const path = `/api/notifications/${TEST_NOTIFICATION_ID}/read`;
+
   it("401 unauthenticated", async () => {
     const { PATCH } = await import("../[notificationId]/read/route");
-    const res = await PATCH(
-      makeRequest("/api/notifications/n/read", { method: "PATCH" }),
-      { params: Promise.resolve({ notificationId: "n-1" }) },
-    );
+    const res = await PATCH(makeRequest(path, { method: "PATCH" }), ctx);
     expect(res.status).toBe(401);
+  });
+
+  it("400 when id is not a UUID", async () => {
+    mock.setUser(makeUser({ id: "u-1" }));
+    const { PATCH } = await import("../[notificationId]/read/route");
+    const res = await PATCH(
+      makeRequest("/api/notifications/garbage/read", { method: "PATCH" }),
+      { params: Promise.resolve({ notificationId: "garbage" }) },
+    );
+    expect(res.status).toBe(400);
   });
 
   it("500 when update throws", async () => {
     mock.setUser(makeUser({ id: "u-1" }));
     mock.setTableError("notifications", { message: "rls" });
     const { PATCH } = await import("../[notificationId]/read/route");
-    const res = await PATCH(
-      makeRequest("/api/notifications/n-1/read", { method: "PATCH" }),
-      { params: Promise.resolve({ notificationId: "n-1" }) },
-    );
+    const res = await PATCH(makeRequest(path, { method: "PATCH" }), ctx);
     expect(res.status).toBe(500);
   });
 
   it("marks a notification as read", async () => {
     mock.setUser(makeUser({ id: "u-1" }));
     mock.setTable("notifications", [
-      makeNotification({ id: "n-1", user_id: "u-1", is_read: false }),
+      makeNotification({
+        id: TEST_NOTIFICATION_ID,
+        user_id: "u-1",
+        is_read: false,
+      }),
     ]);
     const { PATCH } = await import("../[notificationId]/read/route");
-    const res = await PATCH(
-      makeRequest("/api/notifications/n-1/read", { method: "PATCH" }),
-      { params: Promise.resolve({ notificationId: "n-1" }) },
-    );
+    const res = await PATCH(makeRequest(path, { method: "PATCH" }), ctx);
     expect(res.status).toBe(200);
   });
 });

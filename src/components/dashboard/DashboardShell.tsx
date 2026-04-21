@@ -44,15 +44,20 @@ export function DashboardShell({
   connectionContext,
 }: DashboardShellProps) {
   const { narrative, isLoading, error, retry } = useDiagnostic(profile.id);
-  const { sync, isSyncing } = useSync(profile.id);
+  const { sync, isSyncing, error: syncError } = useSync(profile.id);
   const [scheduleEnabled, setScheduleEnabled] = useState(scheduleActive ?? false);
   const [togglingSchedule, setTogglingSchedule] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
   const router = useRouter();
 
   async function handleSync() {
-    await sync();
-    router.refresh();
+    const result = await sync();
+    if (result) {
+      setSyncSuccess(true);
+      setTimeout(() => setSyncSuccess(false), 3500);
+      router.refresh();
+    }
   }
 
   async function handleToggleSchedule() {
@@ -81,26 +86,39 @@ export function DashboardShell({
   const showSyncButton = isAuthenticatedView && hasConnection;
 
   const toolbar = showSyncButton ? (
-    <div className="flex items-center gap-2">
-      <Button
-        onClick={handleToggleSchedule}
-        disabled={togglingSchedule}
-        variant="ghost"
-        size="sm"
-        className={`text-xs ${scheduleEnabled ? "text-emerald-500" : "text-muted-foreground"}`}
-      >
-        <Clock className="mr-1 h-3 w-3" />
-        {scheduleEnabled ? "Auto-sync on" : "Auto-sync off"}
-      </Button>
-      <Button
-        onClick={handleSync}
-        disabled={isSyncing}
-        variant="outline"
-        size="sm"
-      >
-        <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-        {isSyncing ? "Syncing..." : "Sync Now"}
-      </Button>
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handleToggleSchedule}
+          disabled={togglingSchedule}
+          variant="ghost"
+          size="sm"
+          className={`text-xs ${scheduleEnabled ? "text-emerald-500" : "text-muted-foreground"}`}
+        >
+          <Clock className="mr-1 h-3 w-3" />
+          {scheduleEnabled ? "Auto-sync on" : "Auto-sync off"}
+        </Button>
+        <Button
+          onClick={handleSync}
+          disabled={isSyncing}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+          {isSyncing ? "Syncing..." : "Sync Now"}
+        </Button>
+      </div>
+      {syncError ? (
+        <p
+          role="alert"
+          className="text-xs text-red-500"
+        >
+          Sync failed: {syncError}
+        </p>
+      ) : null}
+      {syncSuccess ? (
+        <p className="text-xs text-emerald-500">Sync complete</p>
+      ) : null}
     </div>
   ) : null;
 

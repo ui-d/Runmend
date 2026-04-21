@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type Stripe from "stripe";
@@ -29,6 +30,18 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // Idempotency: dedupe replayed events by Stripe event id. A 23505 PK
+  // violation means we already processed this event; bail out. Any other
+  // error (DB down etc.) falls through and we still process — losing a
+  // paid event is worse than a rare duplicate.
+  const { error: insertError } = await admin
+    .from("stripe_webhook_events")
+    .insert({ id: event.id, type: event.type });
+
+  if (insertError?.code === "23505") {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -65,6 +78,9 @@ export async function POST(request: NextRequest) {
                 reason: "requested_by_customer",
               });
             } catch (refundErr) {
+              Sentry.captureException(refundErr, {
+                tags: { route: "billing/webhook", step: "ltd_refund" },
+              });
               console.error("LTD oversold refund failed", refundErr);
             }
           }
@@ -211,6 +227,9 @@ export async function POST(request: NextRequest) {
           })
           .eq("stripe_customer_id", customer.id);
       } catch (err) {
+        Sentry.captureException(err, {
+          tags: { route: "billing/webhook", step: "customer_updated" },
+        });
         console.error("customer.updated tax mirror failed", err);
       }
       break;

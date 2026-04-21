@@ -182,6 +182,16 @@ export const accountUpdateSchema = z.object({
     .max(80, "Full name must be 80 characters or fewer"),
 });
 
+// --- Invoice listing ---
+
+export const invoiceListQuerySchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID"),
+});
+
+// --- Path param helpers ---
+
+export const uuidParamSchema = z.string().uuid("Invalid id");
+
 // --- Helper to format Zod errors ---
 
 export function formatZodErrors(error: z.ZodError): string {

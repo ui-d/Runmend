@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import Anthropic from "@anthropic-ai/sdk";
 import { getProfileById as getDemoProfile } from "@/lib/profiles";
 import { DiagnosticNarrative, getPlatformLabel } from "@/lib/types";
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
       // Ignore fallback attempt errors
     }
 
+    Sentry.captureException(err, { tags: { route: "diagnostic" } });
     console.error("Diagnostic API error:", err);
     return NextResponse.json(
       { error: "Failed to generate diagnostic" },

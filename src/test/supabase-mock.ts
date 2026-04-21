@@ -327,7 +327,12 @@ export function createSupabaseMock() {
   const client = {
     from(table: string) {
       return {
-        select: (sel?: string) => buildBuilder(table, "select", undefined).select(sel),
+        select: (sel?: string) => {
+          const b = buildBuilder(table, "select", undefined) as {
+            select: (s?: string) => unknown;
+          };
+          return b.select(sel);
+        },
         insert: (payload: unknown) => buildBuilder(table, "insert", payload),
         update: (payload: unknown) => buildBuilder(table, "update", payload),
         upsert: (payload: unknown) => buildBuilder(table, "upsert", payload),

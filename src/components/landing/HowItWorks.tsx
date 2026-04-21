@@ -1,61 +1,82 @@
-import { Link2, Search, Wrench } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
+
+import { Plug, ScanLine, Sparkles } from "lucide-react";
+import { FadeIn } from "./animations/FadeIn";
 
 const steps = [
   {
-    icon: Link2,
+    icon: Plug,
     step: "01",
-    title: "Connect your platform",
+    title: "Connect",
+    time: "under 60 seconds",
     description:
-      "Link your client's Make.com or n8n instance. Runmend reads automations, execution logs, and connection statuses — read-only, nothing is modified.",
+      "Drop in a Make.com API key or an n8n instance URL + key. We store it encrypted with AES-256-GCM and never write it to logs.",
   },
   {
-    icon: Search,
+    icon: ScanLine,
     step: "02",
-    title: "Get an instant health audit",
+    title: "Detect",
+    time: "every 15 minutes, automatically",
     description:
-      "Our engine scans every workflow for silent failures, expiring credentials, broken field mappings, and wasted tasks. Each issue includes business impact and severity.",
+      "Six rules run on every sync — silent failure, high error rate, error spike, consecutive failures, zombie automation, credential expiration.",
   },
   {
-    icon: Wrench,
+    icon: Sparkles,
     step: "03",
-    title: "Fix with AI-guided steps",
+    title: "Diagnose",
+    time: "one click from a client-ready report",
     description:
-      "For each issue, Runmend generates a specific, actionable fix — not generic advice. AI diagnostics explain what broke, why it matters, and exactly how to resolve it.",
+      "Claude reads the execution stats, open issues and error patterns and writes a three-part diagnostic: overall health, the most dangerous issue, and what to do next.",
   },
 ];
 
 export function HowItWorks() {
   return (
     <section id="how-it-works" className="max-w-5xl mx-auto px-4 py-20">
-      <div className="text-center mb-12">
-        <p className="text-sm font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">
-          How it works
-        </p>
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Three steps to healthy automations
-        </h2>
-      </div>
+      <FadeIn>
+        <div className="text-center mb-12">
+          <p className="text-sm font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">
+            How it works
+          </p>
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Three steps from blind to briefed
+          </h2>
+        </div>
+      </FadeIn>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {steps.map((item) => (
-          <Card key={item.step} className="relative overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted">
-                  <item.icon className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
+        <div
+          aria-hidden="true"
+          className="hidden md:block absolute left-0 right-0 top-8 h-px"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(90deg, hsl(var(--border)) 0 6px, transparent 6px 14px)",
+          }}
+        />
+        {steps.map((s, i) => {
+          const Icon = s.icon;
+          return (
+            <FadeIn key={s.title} delay={i * 120}>
+              <article className="relative rounded-xl border border-border/60 bg-card/30 p-5 h-full">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground text-background">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="text-[11px] font-mono text-muted-foreground/70">
+                    {s.step}
+                  </span>
                 </div>
-                <span className="text-xs font-mono text-muted-foreground/50">
-                  {item.step}
-                </span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {item.description}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+                <h3 className="text-base font-semibold">{s.title}</h3>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70 mt-0.5 mb-3">
+                  {s.time}
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {s.description}
+                </p>
+              </article>
+            </FadeIn>
+          );
+        })}
       </div>
     </section>
   );

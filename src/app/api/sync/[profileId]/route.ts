@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncProfile } from "@/lib/sync/engine";
 import { checkPlanLimit, resolveEffectivePlan } from "@/lib/stripe";
+import { getWorkspaceMembership } from "@/lib/security/workspace-auth";
+import { uuidParamSchema } from "@/lib/validation/schemas";
 
 interface RouteContext {
   params: Promise<{ profileId: string }>;
 }
 
-export async function POST(request: NextRequest, context: RouteContext) {
+export async function POST(_request: NextRequest, context: RouteContext) {
   try {
     const { profileId } = await context.params;
     const supabase = await createClient();
@@ -19,21 +21,32 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify user has access to this profile's workspace
+    const idCheck = uuidParamSchema.safeParse(profileId);
+    if (!idCheck.success) {
+      return NextResponse.json(
+        { error: "Invalid profile id" },
+        { status: 400 },
+      );
+    }
+
     const { data: profile } = await supabase
       .from("automation_profiles")
       .select("id, workspace_id")
       .eq("id", profileId)
-      .single();
+      .maybeSingle();
 
     if (!profile) {
-      return NextResponse.json(
-        { error: "Profile not found or access denied" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Check plan limit for syncs per day
+    const membership = await getWorkspaceMembership(
+      supabase,
+      profile.workspace_id,
+    );
+    if (!membership) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const { data: subscription } = await supabase
       .from("subscriptions")
       .select("plan, is_ltd")
@@ -59,7 +72,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           plan,
           upgrade: true,
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 

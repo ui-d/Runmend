@@ -10,6 +10,7 @@ import {
   makeMember,
   makeUser,
   TEST_UUID,
+  TEST_CONNECTION_ID,
 } from "@/test/factories";
 
 let mock: SupabaseMock;
@@ -53,35 +54,37 @@ describe("500 error paths", () => {
     expect(res.status).toBe(500);
   });
 
-  it("connections DELETE returns 500 on error", async () => {
+  it("connections DELETE returns 404 when lookup fails", async () => {
     mock.setUser(makeUser());
     mock.setTableError("platform_connections", { message: "db" });
     const { DELETE } = await import(
       "../connections/[connectionId]/route"
     );
     const res = await DELETE(
-      makeRequest("/api/connections/c-1", { method: "DELETE" }),
-      { params: Promise.resolve({ connectionId: "c-1" }) },
+      makeRequest(`/api/connections/${TEST_CONNECTION_ID}`, { method: "DELETE" }),
+      { params: Promise.resolve({ connectionId: TEST_CONNECTION_ID }) },
     );
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(404);
   });
 
   it("connection test POST handles connection with no api_key", async () => {
     mock.setUser(makeUser());
     mock.setTable("platform_connections", [
       makeConnection({
-        id: "c-1",
+        id: TEST_CONNECTION_ID,
+        workspace_id: TEST_UUID,
         platform: "make",
         api_key_encrypted: null,
         zone: "eu1",
       }),
     ]);
+    mock.setTable("workspace_members", [makeMember()]);
     const { POST } = await import(
       "../connections/[connectionId]/test/route"
     );
     const res = await POST(
-      makeRequest("/api/connections/c-1/test", { method: "POST" }),
-      { params: Promise.resolve({ connectionId: "c-1" }) },
+      makeRequest(`/api/connections/${TEST_CONNECTION_ID}/test`, { method: "POST" }),
+      { params: Promise.resolve({ connectionId: TEST_CONNECTION_ID }) },
     );
     expect(res.status).toBe(200);
   });

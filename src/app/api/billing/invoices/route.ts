@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { getWorkspaceMembership } from "@/lib/security/workspace-auth";
+import {
+  invoiceListQuerySchema,
+  formatZodErrors,
+} from "@/lib/validation/schemas";
 
 export interface InvoiceSummary {
   id: string;
@@ -25,13 +29,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
-    if (!workspaceId) {
+    const parsed = invoiceListQuerySchema.safeParse({
+      workspaceId: request.nextUrl.searchParams.get("workspaceId") ?? "",
+    });
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "workspaceId is required" },
+        { error: formatZodErrors(parsed.error) },
         { status: 400 }
       );
     }
+    const { workspaceId } = parsed.data;
 
     const membership = await getWorkspaceMembership(supabase, workspaceId);
     if (!membership) {

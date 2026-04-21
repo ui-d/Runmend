@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabase-mock";
 import { makeRequest, readJson } from "@/test/next-mocks";
-import { makeMember, makeUser, makeConnection, TEST_UUID } from "@/test/factories";
+import {
+  makeMember,
+  makeUser,
+  makeConnection,
+  TEST_UUID,
+  TEST_CONNECTION_ID,
+} from "@/test/factories";
 import type { PlatformAdapter } from "@/lib/platform-adapters/types";
 
 let mock: SupabaseMock;
@@ -120,38 +126,55 @@ describe("POST /api/connections", () => {
 });
 
 describe("connections/[connectionId] DELETE", () => {
+  const ctx = { params: Promise.resolve({ connectionId: TEST_CONNECTION_ID }) };
+  const path = `/api/connections/${TEST_CONNECTION_ID}`;
+
   it("deletes the connection when authenticated", async () => {
-    const { DELETE } = await import(
-      "../[connectionId]/route"
-    );
+    const { DELETE } = await import("../[connectionId]/route");
     mock.setUser(makeUser({ id: "u-1" }));
-    mock.setTable("platform_connections", [makeConnection({ id: "c-1" })]);
-    const res = await DELETE(
-      makeRequest("/api/connections/c-1", { method: "DELETE" }),
-      { params: Promise.resolve({ connectionId: "c-1" }) },
-    );
+    mock.setTable("platform_connections", [
+      makeConnection({ id: TEST_CONNECTION_ID, workspace_id: TEST_UUID }),
+    ]);
+    mock.setTable("workspace_members", [makeMember({ user_id: "u-1" })]);
+    const res = await DELETE(makeRequest(path, { method: "DELETE" }), ctx);
     expect(res.status).toBe(200);
   });
 
   it("returns 401 when unauthenticated", async () => {
     const { DELETE } = await import("../[connectionId]/route");
-    const res = await DELETE(
-      makeRequest("/api/connections/c-1", { method: "DELETE" }),
-      { params: Promise.resolve({ connectionId: "c-1" }) },
-    );
+    const res = await DELETE(makeRequest(path, { method: "DELETE" }), ctx);
     expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when connection id is not a UUID", async () => {
+    mock.setUser(makeUser({ id: "u-1" }));
+    const { DELETE } = await import("../[connectionId]/route");
+    const res = await DELETE(
+      makeRequest("/api/connections/garbage", { method: "DELETE" }),
+      { params: Promise.resolve({ connectionId: "garbage" }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when the caller is not a workspace member", async () => {
+    mock.setUser(makeUser({ id: "u-1" }));
+    mock.setTable("platform_connections", [
+      makeConnection({ id: TEST_CONNECTION_ID, workspace_id: TEST_UUID }),
+    ]);
+    mock.setTable("workspace_members", []);
+    const { DELETE } = await import("../[connectionId]/route");
+    const res = await DELETE(makeRequest(path, { method: "DELETE" }), ctx);
+    expect(res.status).toBe(404);
   });
 });
 
 describe("connections/[connectionId]/test POST", () => {
+  const ctx = { params: Promise.resolve({ connectionId: TEST_CONNECTION_ID }) };
+  const path = `/api/connections/${TEST_CONNECTION_ID}/test`;
+
   it("returns 401 when unauthenticated", async () => {
-    const { POST: testPost } = await import(
-      "../[connectionId]/test/route"
-    );
-    const res = await testPost(
-      makeRequest("/api/connections/c-1/test", { method: "POST" }),
-      { params: Promise.resolve({ connectionId: "c-1" }) },
-    );
+    const { POST: testPost } = await import("../[connectionId]/test/route");
+    const res = await testPost(makeRequest(path, { method: "POST" }), ctx);
     expect(res.status).toBe(401);
   });
 
@@ -159,10 +182,24 @@ describe("connections/[connectionId]/test POST", () => {
     const { POST: testPost } = await import("../[connectionId]/test/route");
     mock.setUser(makeUser());
     mock.setTable("platform_connections", []);
-    const res = await testPost(
-      makeRequest("/api/connections/c-1/test", { method: "POST" }),
-      { params: Promise.resolve({ connectionId: "c-1" }) },
-    );
+    const res = await testPost(makeRequest(path, { method: "POST" }), ctx);
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when the caller is not a workspace member", async () => {
+    const { POST: testPost } = await import("../[connectionId]/test/route");
+    mock.setUser(makeUser());
+    mock.setTable("platform_connections", [
+      makeConnection({
+        id: TEST_CONNECTION_ID,
+        workspace_id: TEST_UUID,
+        platform: "make",
+        api_key_encrypted: "enc:k",
+        zone: "eu1",
+      }),
+    ]);
+    mock.setTable("workspace_members", []);
+    const res = await testPost(makeRequest(path, { method: "POST" }), ctx);
     expect(res.status).toBe(404);
   });
 
@@ -171,16 +208,15 @@ describe("connections/[connectionId]/test POST", () => {
     mock.setUser(makeUser());
     mock.setTable("platform_connections", [
       makeConnection({
-        id: "c-1",
+        id: TEST_CONNECTION_ID,
+        workspace_id: TEST_UUID,
         platform: "make",
         api_key_encrypted: "enc:k",
         zone: "eu1",
       }),
     ]);
-    const res = await testPost(
-      makeRequest("/api/connections/c-1/test", { method: "POST" }),
-      { params: Promise.resolve({ connectionId: "c-1" }) },
-    );
+    mock.setTable("workspace_members", [makeMember()]);
+    const res = await testPost(makeRequest(path, { method: "POST" }), ctx);
     expect(res.status).toBe(200);
     const body = (await readJson(res)) as { ok: boolean };
     expect(body.ok).toBe(true);

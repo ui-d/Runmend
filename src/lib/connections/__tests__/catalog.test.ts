@@ -28,7 +28,7 @@ describe("catalog", () => {
   });
 
   it("LIVE_SLUGS contains only make and n8n", () => {
-    expect([...LIVE_SLUGS].sort()).toEqual(["make", "n8n"]);
+    expect(Array.from(LIVE_SLUGS).sort()).toEqual(["make", "n8n"]);
   });
 
   it("sync interval is positive", () => {

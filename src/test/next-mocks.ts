@@ -30,18 +30,17 @@ export function makeRequest(
     headers.set("Content-Type", "application/json");
   }
 
-  const init: RequestInit = {
+  const body = hasBody
+    ? typeof options.body === "string"
+      ? options.body
+      : JSON.stringify(options.body)
+    : undefined;
+
+  return new NextRequest(url, {
     method: options.method ?? "GET",
     headers,
-  };
-  if (hasBody) {
-    init.body =
-      typeof options.body === "string"
-        ? options.body
-        : JSON.stringify(options.body);
-  }
-
-  return new NextRequest(url, init);
+    ...(body !== undefined ? { body } : {}),
+  });
 }
 
 export async function readJson(response: Response): Promise<unknown> {
