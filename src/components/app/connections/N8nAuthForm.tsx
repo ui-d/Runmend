@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import type { ConnectedConnection } from "./MakeAuthForm";
+
 interface N8nAuthFormProps {
   workspaceId: string;
   defaultDisplayName: string;
   allowRenameAccount: boolean;
   onSuccess: () => void;
   onBack?: () => void;
+  onConnected?: (connection: ConnectedConnection) => void;
 }
 
 export function N8nAuthForm({
@@ -21,6 +24,7 @@ export function N8nAuthForm({
   allowRenameAccount,
   onSuccess,
   onBack,
+  onConnected,
 }: N8nAuthFormProps) {
   const [instanceUrl, setInstanceUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -54,6 +58,13 @@ export function N8nAuthForm({
       toast.success(`n8n · ${label} connected`);
       setApiKey("");
       setInstanceUrl("");
+      if (onConnected && data.connection?.id) {
+        onConnected({
+          id: data.connection.id,
+          platform: "n8n",
+          displayName: label,
+        });
+      }
       router.refresh();
       onSuccess();
     } catch (err: unknown) {

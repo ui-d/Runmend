@@ -23,6 +23,16 @@ export const connectionCreateSchema = z.object({
 
 export type ConnectionCreateInput = z.infer<typeof connectionCreateSchema>;
 
+// --- Profiles ---
+
+export const profileUpdateSchema = z
+  .object({
+    connection_id: z.string().uuid("Invalid connection ID").nullable(),
+  })
+  .strict();
+
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+
 // --- Schedules ---
 
 const cronFieldRegex = /^(\*|(\d{1,2})(,\d{1,2})*)$/;

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   connectionCreateSchema,
+  profileUpdateSchema,
   scheduleUpsertSchema,
   checkoutSchema,
   diagnosticSchema,
@@ -69,6 +70,40 @@ describe("connectionCreateSchema", () => {
       workspaceId: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
       platform: "make",
       zone: "invalid",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("profileUpdateSchema", () => {
+  it("accepts a valid connection_id UUID", () => {
+    const result = profileUpdateSchema.safeParse({
+      connection_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null connection_id to unlink", () => {
+    const result = profileUpdateSchema.safeParse({ connection_id: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects non-UUID connection_id", () => {
+    const result = profileUpdateSchema.safeParse({
+      connection_id: "not-a-uuid",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing connection_id key", () => {
+    const result = profileUpdateSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown keys", () => {
+    const result = profileUpdateSchema.safeParse({
+      connection_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      name: "sneaky update",
     });
     expect(result.success).toBe(false);
   });

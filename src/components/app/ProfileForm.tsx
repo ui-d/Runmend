@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddConnectionDialog } from "@/components/app/connections/AddConnectionDialog";
 
 interface ConnectionOption {
   id: string;
@@ -23,6 +24,7 @@ interface ProfileFormProps {
   plan?: string;
   profileLimit?: number;
   connections: ConnectionOption[];
+  initialConnectionId?: string;
 }
 
 export function ProfileForm({
@@ -32,18 +34,33 @@ export function ProfileForm({
   plan,
   profileLimit,
   connections,
+  initialConnectionId,
 }: ProfileFormProps) {
   const atLimit =
     profileLimit !== undefined &&
     profileLimit !== -1 &&
     currentProfileCount !== undefined &&
     currentProfileCount >= profileLimit;
+
+  const initialConnection = useMemo(
+    () =>
+      initialConnectionId
+        ? connections.find((c) => c.id === initialConnectionId)
+        : undefined,
+    [initialConnectionId, connections],
+  );
+
   const [name, setName] = useState("");
-  const [platform, setPlatform] = useState<"make" | "n8n">("make");
+  const [platform, setPlatform] = useState<"make" | "n8n">(
+    initialConnection && (initialConnection.platform === "make" || initialConnection.platform === "n8n")
+      ? (initialConnection.platform as "make" | "n8n")
+      : "make",
+  );
   const [industry, setIndustry] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const router = useRouter();
 
   const platformConnections = useMemo(
@@ -52,7 +69,7 @@ export function ProfileForm({
   );
 
   const [connectionId, setConnectionId] = useState<string>(
-    platformConnections[0]?.id ?? "",
+    initialConnection?.id ?? platformConnections[0]?.id ?? "",
   );
 
   // Keep the selection valid when the platform changes.
@@ -159,30 +176,33 @@ export function ProfileForm({
             <Label htmlFor="connection">Connection</Label>
             {hasConnection ? (
               <>
-                <select
-                  id="connection"
-                  value={effectiveConnectionId}
-                  onChange={(e) => setConnectionId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {platformConnections.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.displayName}
-                      {c.status !== "active" ? ` (${c.status})` : ""}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Pick the{" "}
-                  {platform === "make" ? "Make.com" : "n8n"} account this
-                  client lives in.{" "}
-                  <Link
-                    href={`/app/${workspaceSlug}/connections`}
-                    className="underline underline-offset-2 hover:text-foreground"
+                <div className="flex gap-2">
+                  <select
+                    id="connection"
+                    value={effectiveConnectionId}
+                    onChange={(e) => setConnectionId(e.target.value)}
+                    className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
-                    Add another account
-                  </Link>
-                  .
+                    {platformConnections.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.displayName}
+                        {c.status !== "active" ? ` (${c.status})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDialogOpen(true)}
+                  >
+                    <Plus className="mr-1 h-3 w-3" />
+                    Connect new
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Pick the {platform === "make" ? "Make.com" : "n8n"} account
+                  this client lives in.
                 </p>
               </>
             ) : (
@@ -194,12 +214,14 @@ export function ProfileForm({
                   Connect the account this client uses before creating the
                   profile.
                 </p>
-                <Link
-                  href={`/app/${workspaceSlug}/connections`}
-                  className="inline-flex items-center text-foreground underline underline-offset-2"
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setDialogOpen(true)}
                 >
-                  Open connections →
-                </Link>
+                  <Plus className="mr-1 h-3 w-3" />
+                  Connect {platform === "make" ? "Make.com" : "n8n"}
+                </Button>
               </div>
             )}
           </div>
@@ -240,6 +262,20 @@ export function ProfileForm({
           </div>
         </form>
       </CardContent>
+
+      <AddConnectionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        workspaceId={workspaceId}
+        workspaceSlug={workspaceSlug}
+        presetPlatform={platform}
+        defaultDisplayName="Primary"
+        allowRenameAccount={platformConnections.length > 0}
+        onConnected={(conn) => {
+          setPlatform(conn.platform);
+          setConnectionId(conn.id);
+        }}
+      />
     </Card>
   );
 }

@@ -9,10 +9,18 @@ import { ProfileForm } from "@/components/app/ProfileForm";
 
 interface PageProps {
   params: Promise<{ workspaceSlug: string }>;
+  searchParams: Promise<{ connectionId?: string | string[] }>;
 }
 
-export default async function NewProfilePage({ params }: PageProps) {
+export default async function NewProfilePage({
+  params,
+  searchParams,
+}: PageProps) {
   const { workspaceSlug } = await params;
+  const { connectionId: rawConnectionId } = await searchParams;
+  const initialConnectionId = Array.isArray(rawConnectionId)
+    ? rawConnectionId[0]
+    : rawConnectionId;
   const supabase = await createClient();
   const {
     data: { user },
@@ -50,6 +58,7 @@ export default async function NewProfilePage({ params }: PageProps) {
         plan={plan}
         profileLimit={limitCheck.limit}
         connections={connectionOptions}
+        initialConnectionId={initialConnectionId}
       />
     </div>
   );

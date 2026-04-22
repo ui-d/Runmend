@@ -14,7 +14,7 @@ import {
   type CatalogSlug,
 } from "@/lib/connections/catalog";
 import { ConnectorLogo } from "./ConnectorLogo";
-import { MakeAuthForm } from "./MakeAuthForm";
+import { MakeAuthForm, type ConnectedConnection } from "./MakeAuthForm";
 import { N8nAuthForm } from "./N8nAuthForm";
 
 type LivePlatform = "make" | "n8n";
@@ -31,6 +31,7 @@ interface AddConnectionDialogProps {
   presetPlatform?: LivePlatform | null;
   defaultDisplayName?: string;
   allowRenameAccount?: boolean;
+  onConnected?: (connection: ConnectedConnection) => void;
 }
 
 /**
@@ -46,6 +47,7 @@ export function AddConnectionDialog({
   presetPlatform = null,
   defaultDisplayName = "Primary",
   allowRenameAccount = false,
+  onConnected,
 }: AddConnectionDialogProps) {
   const [platform, setPlatform] = useState<LivePlatform | null>(presetPlatform);
 
@@ -94,6 +96,7 @@ export function AddConnectionDialog({
             allowRenameAccount={allowRenameAccount}
             onSuccess={handleSuccess}
             onBack={presetPlatform ? undefined : handleBackToPicker}
+            onConnected={onConnected}
           />
         )}
 
@@ -104,6 +107,7 @@ export function AddConnectionDialog({
             allowRenameAccount={allowRenameAccount}
             onSuccess={handleSuccess}
             onBack={presetPlatform ? undefined : handleBackToPicker}
+            onConnected={onConnected}
           />
         )}
       </DialogContent>

@@ -29,6 +29,7 @@ interface DashboardShellProps {
   backLabel?: string;
   automations?: AutomationTile[];
   connectionContext?: ConnectionUrlContext | null;
+  connectionSlot?: React.ReactNode;
 }
 
 export function DashboardShell({
@@ -42,6 +43,7 @@ export function DashboardShell({
   backLabel,
   automations,
   connectionContext,
+  connectionSlot,
 }: DashboardShellProps) {
   const { narrative, isLoading, error, retry } = useDiagnostic(profile.id);
   const { sync, isSyncing, error: syncError } = useSync(profile.id);
@@ -148,6 +150,8 @@ export function DashboardShell({
           backLabel={backLabel}
           rightSlot={toolbar}
         />
+
+        {connectionSlot}
 
         <HealthHero score={profile.healthScore} issues={profile.issues} />
 

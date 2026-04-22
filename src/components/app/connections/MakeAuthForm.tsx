@@ -7,12 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+export interface ConnectedConnection {
+  id: string;
+  platform: "make" | "n8n";
+  displayName: string;
+}
+
 interface MakeAuthFormProps {
   workspaceId: string;
   defaultDisplayName: string;
   allowRenameAccount: boolean;
   onSuccess: () => void;
   onBack?: () => void;
+  onConnected?: (connection: ConnectedConnection) => void;
 }
 
 export function MakeAuthForm({
@@ -21,6 +28,7 @@ export function MakeAuthForm({
   allowRenameAccount,
   onSuccess,
   onBack,
+  onConnected,
 }: MakeAuthFormProps) {
   const [apiKey, setApiKey] = useState("");
   const [zone, setZone] = useState("us1");
@@ -53,6 +61,13 @@ export function MakeAuthForm({
 
       toast.success(`Make.com · ${label} connected`);
       setApiKey("");
+      if (onConnected && data.connection?.id) {
+        onConnected({
+          id: data.connection.id,
+          platform: "make",
+          displayName: label,
+        });
+      }
       router.refresh();
       onSuccess();
     } catch (err: unknown) {

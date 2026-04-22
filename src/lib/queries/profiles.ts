@@ -72,6 +72,7 @@ export async function updateProfile(
     description?: string | null;
     scenario_count?: number;
     health_score?: number;
+    connection_id?: string | null;
   }
 ) {
   const { data, error } = await supabase
