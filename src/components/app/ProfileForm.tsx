@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddConnectionDialog } from "@/components/app/connections/AddConnectionDialog";
 
 interface ConnectionOption {
@@ -25,6 +24,8 @@ interface ProfileFormProps {
   profileLimit?: number;
   connections: ConnectionOption[];
   initialConnectionId?: string;
+  onSuccess?: (profileId: string) => void;
+  onCancel?: () => void;
 }
 
 export function ProfileForm({
@@ -35,6 +36,8 @@ export function ProfileForm({
   profileLimit,
   connections,
   initialConnectionId,
+  onSuccess,
+  onCancel,
 }: ProfileFormProps) {
   const atLimit =
     profileLimit !== undefined &&
@@ -72,7 +75,6 @@ export function ProfileForm({
     initialConnection?.id ?? platformConnections[0]?.id ?? "",
   );
 
-  // Keep the selection valid when the platform changes.
   const effectiveConnectionId = platformConnections.some(
     (c) => c.id === connectionId,
   )
@@ -107,7 +109,12 @@ export function ProfileForm({
         .single();
 
       if (insertError) throw insertError;
-      router.push(`/app/${workspaceSlug}/profiles/${data.id}`);
+
+      if (onSuccess) {
+        onSuccess(data.id);
+      } else {
+        router.push(`/app/${workspaceSlug}/profiles/${data.id}`);
+      }
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to create profile";
@@ -117,151 +124,148 @@ export function ProfileForm({
     }
   }
 
+  function handleCancel() {
+    if (onCancel) {
+      onCancel();
+    } else {
+      router.back();
+    }
+  }
+
   if (atLimit) {
     return (
-      <Card className="max-w-lg border-yellow-500/30 bg-yellow-500/5">
-        <CardContent className="p-6 text-center">
-          <p className="text-sm font-medium mb-2">Client profile limit reached</p>
-          <p className="text-xs text-muted-foreground mb-4">
-            Your {plan ?? "free"} plan allows up to {profileLimit} client profile
-            {profileLimit !== 1 ? "s" : ""}. Upgrade to monitor more clients.
-          </p>
-          <Button
-            onClick={() =>
-              (window.location.href = `/app/${workspaceSlug}/billing`)
-            }
-            size="sm"
-          >
-            Upgrade plan
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-4 text-center">
+        <p className="text-sm font-medium mb-2">Client profile limit reached</p>
+        <p className="text-xs text-muted-foreground mb-4">
+          Your {plan ?? "free"} plan allows up to {profileLimit} client profile
+          {profileLimit !== 1 ? "s" : ""}. Upgrade to monitor more clients.
+        </p>
+        <Button
+          onClick={() =>
+            (window.location.href = `/app/${workspaceSlug}/billing`)
+          }
+          size="sm"
+        >
+          Upgrade plan
+        </Button>
+      </div>
     );
   }
 
   return (
-    <Card className="max-w-lg">
-      <CardHeader>
-        <CardTitle>New Automation Profile</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Client / Project name</Label>
-            <Input
-              id="name"
-              placeholder="e.g. Acme Corp, Marketing Ops"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Client / Project name</Label>
+          <Input
+            id="name"
+            placeholder="e.g. Acme Corp, Marketing Ops"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="platform">Platform</Label>
-            <select
-              id="platform"
-              value={platform}
-              onChange={(e) =>
-                setPlatform(e.target.value as "make" | "n8n")
-              }
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="make">Make.com</option>
-              <option value="n8n">n8n</option>
-            </select>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="platform">Platform</Label>
+          <select
+            id="platform"
+            value={platform}
+            onChange={(e) =>
+              setPlatform(e.target.value as "make" | "n8n")
+            }
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="make">Make.com</option>
+            <option value="n8n">n8n</option>
+          </select>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="connection">Connection</Label>
-            {hasConnection ? (
-              <>
-                <div className="flex gap-2">
-                  <select
-                    id="connection"
-                    value={effectiveConnectionId}
-                    onChange={(e) => setConnectionId(e.target.value)}
-                    className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    {platformConnections.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.displayName}
-                        {c.status !== "active" ? ` (${c.status})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDialogOpen(true)}
-                  >
-                    <Plus className="mr-1 h-3 w-3" />
-                    Connect new
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Pick the {platform === "make" ? "Make.com" : "n8n"} account
-                  this client lives in.
-                </p>
-              </>
-            ) : (
-              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3 text-xs">
-                <p className="mb-2 font-medium">
-                  No {platform === "make" ? "Make.com" : "n8n"} connection yet.
-                </p>
-                <p className="mb-2 text-muted-foreground">
-                  Connect the account this client uses before creating the
-                  profile.
-                </p>
+        <div className="space-y-2">
+          <Label htmlFor="connection">Connection</Label>
+          {hasConnection ? (
+            <>
+              <div className="flex gap-2">
+                <select
+                  id="connection"
+                  value={effectiveConnectionId}
+                  onChange={(e) => setConnectionId(e.target.value)}
+                  className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {platformConnections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.displayName}
+                      {c.status !== "active" ? ` (${c.status})` : ""}
+                    </option>
+                  ))}
+                </select>
                 <Button
                   type="button"
+                  variant="outline"
                   size="sm"
                   onClick={() => setDialogOpen(true)}
                 >
                   <Plus className="mr-1 h-3 w-3" />
-                  Connect {platform === "make" ? "Make.com" : "n8n"}
+                  Connect new
                 </Button>
               </div>
-            )}
-          </div>
+              <p className="text-xs text-muted-foreground">
+                Pick the {platform === "make" ? "Make.com" : "n8n"} account
+                this client lives in.
+              </p>
+            </>
+          ) : (
+            <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3 text-xs">
+              <p className="mb-2 font-medium">
+                No {platform === "make" ? "Make.com" : "n8n"} connection yet.
+              </p>
+              <p className="mb-2 text-muted-foreground">
+                Connect the account this client uses before creating the
+                profile.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setDialogOpen(true)}
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                Connect {platform === "make" ? "Make.com" : "n8n"}
+              </Button>
+            </div>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="industry">Client&apos;s industry (optional)</Label>
-            <Input
-              id="industry"
-              placeholder="e.g. E-commerce, SaaS, Marketing"
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="industry">Client&apos;s industry (optional)</Label>
+          <Input
+            id="industry"
+            placeholder="e.g. E-commerce, SaaS, Marketing"
+            value={industry}
+            onChange={(e) => setIndustry(e.target.value)}
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (optional)</Label>
-            <Input
-              id="description"
-              placeholder="Brief description of this client's automation stack"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="description">Description (optional)</Label>
+          <Input
+            id="description"
+            placeholder="Brief description of this client's automation stack"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <div className="flex gap-3">
-            <Button type="submit" disabled={loading || !hasConnection}>
-              {loading ? "Creating..." : "Create Profile"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </CardContent>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading || !hasConnection}>
+            {loading ? "Creating..." : "Create Profile"}
+          </Button>
+        </div>
+      </form>
 
       <AddConnectionDialog
         open={dialogOpen}
@@ -276,6 +280,6 @@ export function ProfileForm({
           setConnectionId(conn.id);
         }}
       />
-    </Card>
+    </>
   );
 }

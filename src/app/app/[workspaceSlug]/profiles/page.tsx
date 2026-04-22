@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Plus, BarChart3, RefreshCw } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceBySlug } from "@/lib/queries/workspaces";
+import { getWorkspaceProfiles } from "@/lib/queries/profiles";
+import { getWorkspaceConnections } from "@/lib/queries/connections";
+import { getWorkspaceSubscription } from "@/lib/queries/subscriptions";
+import { checkPlanLimit, resolveEffectivePlan } from "@/lib/stripe";
 import {
   getWorkspaceProfileTriage,
   getWorkspacePulse,
@@ -10,13 +13,21 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { TriageTable } from "@/components/app/profiles/TriageTable";
 import { WorkspaceSummaryHeader } from "@/components/app/profiles/WorkspaceSummaryHeader";
+import { NewProfileButton } from "@/components/app/profiles/NewProfileButton";
 
 interface PageProps {
   params: Promise<{ workspaceSlug: string }>;
+  searchParams: Promise<{ new?: string; connectionId?: string | string[] }>;
 }
 
-export default async function ProfilesPage({ params }: PageProps) {
+export default async function ProfilesPage({ params, searchParams }: PageProps) {
   const { workspaceSlug } = await params;
+  const { new: newParam, connectionId: rawConnectionId } = await searchParams;
+  const initialConnectionId = Array.isArray(rawConnectionId)
+    ? rawConnectionId[0]
+    : rawConnectionId;
+  const initialOpen = newParam === "1" || newParam === "true";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -26,10 +37,22 @@ export default async function ProfilesPage({ params }: PageProps) {
   const workspace = await getWorkspaceBySlug(supabase, workspaceSlug);
   if (!workspace) redirect("/app");
 
-  const [rows, pulse] = await Promise.all([
+  const [rows, pulse, profiles, connections, subscription] = await Promise.all([
     getWorkspaceProfileTriage(supabase, workspace.id),
     getWorkspacePulse(supabase, workspace.id),
+    getWorkspaceProfiles(supabase, workspace.id),
+    getWorkspaceConnections(supabase, workspace.id),
+    getWorkspaceSubscription(supabase, workspace.id),
   ]);
+
+  const plan = resolveEffectivePlan(subscription);
+  const limitCheck = checkPlanLimit(plan, "profiles", profiles.length);
+  const connectionOptions = connections.map((c) => ({
+    id: c.id,
+    platform: c.platform,
+    displayName: c.display_name,
+    status: c.status,
+  }));
 
   let warning = 0;
   let info = 0;
@@ -57,13 +80,16 @@ export default async function ProfilesPage({ params }: PageProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/app/${workspaceSlug}/profiles/new`}
-            className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            New profile
-          </Link>
+          <NewProfileButton
+            workspaceId={workspace.id}
+            workspaceSlug={workspaceSlug}
+            currentProfileCount={profiles.length}
+            plan={plan}
+            profileLimit={limitCheck.limit}
+            connections={connectionOptions}
+            initialConnectionId={initialConnectionId}
+            initialOpen={initialOpen}
+          />
         </div>
       </div>
 
@@ -77,13 +103,18 @@ export default async function ProfilesPage({ params }: PageProps) {
                 Create your first automation profile to start monitoring.
               </p>
             </div>
-            <Link
-              href={`/app/${workspaceSlug}/profiles/new`}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Create profile
-            </Link>
+            <div className="flex justify-center">
+              <NewProfileButton
+                workspaceId={workspace.id}
+                workspaceSlug={workspaceSlug}
+                currentProfileCount={profiles.length}
+                plan={plan}
+                profileLimit={limitCheck.limit}
+                connections={connectionOptions}
+                initialConnectionId={initialConnectionId}
+                label="Create profile"
+              />
+            </div>
           </CardContent>
         </Card>
       ) : (
