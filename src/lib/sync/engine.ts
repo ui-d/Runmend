@@ -7,6 +7,8 @@ import type { Database } from "@/lib/database.types";
 
 type AutomationRow = Database["public"]["Tables"]["automations"]["Row"];
 type ExecutionLogRow = Database["public"]["Tables"]["execution_logs"]["Row"];
+type ConnectionRow = Database["public"]["Tables"]["platform_connections"]["Row"];
+type ProfileRow = Database["public"]["Tables"]["automation_profiles"]["Row"];
 
 export interface SyncResult {
   automationsUpserted: number;
@@ -31,20 +33,12 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
     throw new Error(`Profile not found: ${profileError?.message}`);
   }
 
-  // 2. Find matching connection
-  const { data: connection, error: connError } = await admin
-    .from("platform_connections")
-    .select("*")
-    .eq("workspace_id", profile.workspace_id)
-    .eq("platform", profile.platform)
-    .eq("status", "active")
-    .single();
-
-  if (connError || !connection) {
-    throw new Error(
-      `No active ${profile.platform} connection found for this workspace`
-    );
-  }
+  // 2. Find matching connection. Prefer the explicit profile.connection_id
+  //    set at creation time. Fall back to platform-matching for legacy
+  //    profiles that predate connection_id — but only if there is exactly
+  //    one active connection for that platform, to avoid picking the wrong
+  //    account when a workspace has multiple.
+  const connection = await loadConnectionForProfile(admin, profile);
 
   // 3. Decrypt credentials and create adapter
   const apiKey = connection.api_key_encrypted
@@ -232,6 +226,54 @@ export async function syncProfile(profileId: string): Promise<SyncResult> {
     healthScore,
     errors,
   };
+}
+
+async function loadConnectionForProfile(
+  admin: ReturnType<typeof createAdminClient>,
+  profile: ProfileRow,
+): Promise<ConnectionRow> {
+  if (profile.connection_id) {
+    const { data, error } = await admin
+      .from("platform_connections")
+      .select("*")
+      .eq("id", profile.connection_id)
+      .maybeSingle();
+    if (error) {
+      throw new Error(`Failed to load connection: ${error.message}`);
+    }
+    if (!data) {
+      throw new Error(
+        `Profile's connection has been removed. Bind a new connection in the profile settings.`,
+      );
+    }
+    if (data.status !== "active") {
+      throw new Error(
+        `Connection "${data.display_name}" is ${data.status}. Reconnect it before syncing.`,
+      );
+    }
+    return data;
+  }
+
+  const { data: candidates, error } = await admin
+    .from("platform_connections")
+    .select("*")
+    .eq("workspace_id", profile.workspace_id)
+    .eq("platform", profile.platform)
+    .eq("status", "active");
+  if (error) {
+    throw new Error(`Failed to look up connections: ${error.message}`);
+  }
+  if (!candidates || candidates.length === 0) {
+    throw new Error(
+      `No active ${profile.platform} connection found for this workspace`,
+    );
+  }
+  if (candidates.length > 1) {
+    throw new Error(
+      `Multiple ${profile.platform} connections exist — pick one on the profile before syncing.`,
+    );
+  }
+  return candidates[0];
 }
 
 async function syncIssues(

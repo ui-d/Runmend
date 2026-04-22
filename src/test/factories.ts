@@ -41,6 +41,7 @@ export function makeProfile(
   return {
     id: overrides.id ?? "p-test",
     workspace_id: overrides.workspace_id ?? TEST_UUID,
+    connection_id: overrides.connection_id ?? null,
     name: overrides.name ?? "Test Profile",
     description: overrides.description ?? null,
     platform: overrides.platform ?? "make",

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,12 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+interface ConnectionOption {
+  id: string;
+  platform: string;
+  displayName: string;
+  status: string;
+}
+
 interface ProfileFormProps {
   workspaceId: string;
   workspaceSlug: string;
   currentProfileCount?: number;
   plan?: string;
   profileLimit?: number;
+  connections: ConnectionOption[];
 }
 
 export function ProfileForm({
@@ -22,6 +31,7 @@ export function ProfileForm({
   currentProfileCount,
   plan,
   profileLimit,
+  connections,
 }: ProfileFormProps) {
   const atLimit =
     profileLimit !== undefined &&
@@ -36,12 +46,35 @@ export function ProfileForm({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const platformConnections = useMemo(
+    () => connections.filter((c) => c.platform === platform),
+    [connections, platform],
+  );
+
+  const [connectionId, setConnectionId] = useState<string>(
+    platformConnections[0]?.id ?? "",
+  );
+
+  // Keep the selection valid when the platform changes.
+  const effectiveConnectionId = platformConnections.some(
+    (c) => c.id === connectionId,
+  )
+    ? connectionId
+    : (platformConnections[0]?.id ?? "");
+
+  const hasConnection = platformConnections.length > 0;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
+      if (!effectiveConnectionId) {
+        throw new Error(
+          "Add a connection for this platform before creating a profile.",
+        );
+      }
       const supabase = createClient();
       const { data, error: insertError } = await supabase
         .from("automation_profiles")
@@ -49,6 +82,7 @@ export function ProfileForm({
           workspace_id: workspaceId,
           name,
           platform,
+          connection_id: effectiveConnectionId,
           industry: industry || null,
           description: description || null,
         })
@@ -122,6 +156,55 @@ export function ProfileForm({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="connection">Connection</Label>
+            {hasConnection ? (
+              <>
+                <select
+                  id="connection"
+                  value={effectiveConnectionId}
+                  onChange={(e) => setConnectionId(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {platformConnections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.displayName}
+                      {c.status !== "active" ? ` (${c.status})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Pick the{" "}
+                  {platform === "make" ? "Make.com" : "n8n"} account this
+                  client lives in.{" "}
+                  <Link
+                    href={`/app/${workspaceSlug}/connections`}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    Add another account
+                  </Link>
+                  .
+                </p>
+              </>
+            ) : (
+              <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3 text-xs">
+                <p className="mb-2 font-medium">
+                  No {platform === "make" ? "Make.com" : "n8n"} connection yet.
+                </p>
+                <p className="mb-2 text-muted-foreground">
+                  Connect the account this client uses before creating the
+                  profile.
+                </p>
+                <Link
+                  href={`/app/${workspaceSlug}/connections`}
+                  className="inline-flex items-center text-foreground underline underline-offset-2"
+                >
+                  Open connections →
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="industry">Client&apos;s industry (optional)</Label>
             <Input
               id="industry"
@@ -144,7 +227,7 @@ export function ProfileForm({
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="flex gap-3">
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !hasConnection}>
               {loading ? "Creating..." : "Create Profile"}
             </Button>
             <Button

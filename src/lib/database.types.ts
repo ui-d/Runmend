@@ -110,6 +110,7 @@ export type Database = {
       }
       automation_profiles: {
         Row: {
+          connection_id: string | null
           created_at: string
           description: string | null
           health_score: number
@@ -124,6 +125,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          connection_id?: string | null
           created_at?: string
           description?: string | null
           health_score?: number
@@ -138,6 +140,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          connection_id?: string | null
           created_at?: string
           description?: string | null
           health_score?: number
@@ -152,6 +155,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "automation_profiles_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "automation_profiles_workspace_id_fkey"
             columns: ["workspace_id"]

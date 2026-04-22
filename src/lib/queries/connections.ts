@@ -42,6 +42,22 @@ export async function getWorkspaceConnections(
   return data;
 }
 
+export async function getConnectionsByPlatform(
+  supabase: Client,
+  workspaceId: string,
+  platform: string,
+): Promise<ConnectionRow[]> {
+  const { data, error } = await supabase
+    .from("platform_connections")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("platform", platform)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getConnectionById(
   supabase: Client,
   connectionId: string

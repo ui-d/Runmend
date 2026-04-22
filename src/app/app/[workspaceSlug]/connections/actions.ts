@@ -38,10 +38,10 @@ async function assertConnectionAccess(
 }
 
 /**
- * Sync every profile whose automations live on this connection. We match
- * profiles by platform on first run (before any automation rows exist) so
- * the first "Sync now" after connect still pulls scenarios. Subsequent runs
- * iterate the profiles already linked via automations.connection_id.
+ * Sync every profile bound to this connection (via automation_profiles.connection_id),
+ * plus any profile whose automations have already been recorded against this
+ * connection. Running "Sync now" on a freshly-added connection pulls scenarios
+ * for every profile explicitly pointing at it.
  */
 export async function syncConnectionAction(
   connectionId: string,
@@ -51,23 +51,20 @@ export async function syncConnectionAction(
 
   const supabase = await createClient();
 
+  const profileIds = new Set<string>();
+
+  const { data: boundProfiles } = await supabase
+    .from("automation_profiles")
+    .select("id")
+    .eq("workspace_id", access.workspaceId)
+    .eq("connection_id", connectionId);
+  for (const p of boundProfiles ?? []) profileIds.add(p.id);
+
   const { data: linked } = await supabase
     .from("automations")
     .select("profile_id")
     .eq("connection_id", connectionId);
-
-  const profileIds = new Set<string>(
-    (linked ?? []).map((row) => row.profile_id),
-  );
-
-  if (profileIds.size === 0) {
-    const { data: profiles } = await supabase
-      .from("automation_profiles")
-      .select("id")
-      .eq("workspace_id", access.workspaceId)
-      .eq("platform", access.platform);
-    for (const p of profiles ?? []) profileIds.add(p.id);
-  }
+  for (const row of linked ?? []) profileIds.add(row.profile_id);
 
   let succeeded = 0;
   const errors: string[] = [];
@@ -85,7 +82,7 @@ export async function syncConnectionAction(
   if (profileIds.size === 0) {
     return {
       ok: false,
-      error: "No profiles on this platform yet. Create a profile first.",
+      error: "No profiles are linked to this connection yet. Create a profile and bind it to this connection first.",
     };
   }
   if (errors.length > 0 && succeeded === 0) {
