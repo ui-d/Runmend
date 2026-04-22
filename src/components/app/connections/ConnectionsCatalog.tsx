@@ -6,13 +6,11 @@ import { Plus } from "lucide-react";
 import {
   CONNECTED_PLATFORMS,
   isLiveSlug,
-  type CatalogSlug,
 } from "@/lib/connections/catalog";
 import type { ConnectionHealth } from "@/lib/queries/connections";
 import { ConnectionHealthCard } from "./ConnectionHealthCard";
 import { ConnectorLogo } from "./ConnectorLogo";
-import { ConnectMakeDialog } from "@/components/app/ConnectMakeDialog";
-import { ConnectN8nDialog } from "@/components/app/ConnectN8nDialog";
+import { AddConnectionDialog } from "./AddConnectionDialog";
 import { Button } from "@/components/ui/button";
 
 interface ConnectionsCatalogProps {
@@ -25,9 +23,12 @@ interface ConnectionsCatalogProps {
 
 type DialogState =
   | { kind: "none" }
-  | { kind: "picker" }
-  | { kind: "make"; defaultDisplayName: string; allowRename: boolean }
-  | { kind: "n8n"; defaultDisplayName: string; allowRename: boolean };
+  | {
+      kind: "add";
+      presetPlatform: "make" | "n8n" | null;
+      defaultDisplayName: string;
+      allowRenameAccount: boolean;
+    };
 
 export function ConnectionsCatalog({
   workspaceId,
@@ -60,34 +61,23 @@ export function ConnectionsCatalog({
     })).filter((group) => group.connections.length > 0);
   }, [connectedByPlatform]);
 
-  function openAuthDialog(
-    slug: CatalogSlug,
-    options: { defaultDisplayName: string; allowRename: boolean },
-  ) {
-    if (slug === "make") setDialog({ kind: "make", ...options });
-    else if (slug === "n8n") setDialog({ kind: "n8n", ...options });
+  function handleAddConnection() {
+    setDialog({
+      kind: "add",
+      presetPlatform: null,
+      defaultDisplayName: "Primary",
+      allowRenameAccount: false,
+    });
   }
 
   function handleAddAnother(slug: string) {
     if (!isLiveSlug(slug)) return;
     const existing = connectedByPlatform.get(slug) ?? [];
-    openAuthDialog(slug, {
+    setDialog({
+      kind: "add",
+      presetPlatform: slug,
       defaultDisplayName: suggestNextName(existing),
-      allowRename: true,
-    });
-  }
-
-  function handleAddConnection() {
-    setDialog({ kind: "picker" });
-  }
-
-  function handlePlatformPicked(slug: CatalogSlug) {
-    if (!isLiveSlug(slug)) return;
-    const existing = connectedByPlatform.get(slug) ?? [];
-    openAuthDialog(slug, {
-      defaultDisplayName:
-        existing.length === 0 ? "Primary" : suggestNextName(existing),
-      allowRename: existing.length > 0,
+      allowRenameAccount: true,
     });
   }
 
@@ -159,30 +149,18 @@ export function ConnectionsCatalog({
         </Link>
       </footer>
 
-      <PlatformPickerDialog
-        open={dialog.kind === "picker"}
+      <AddConnectionDialog
+        open={dialog.kind === "add"}
         onOpenChange={(open) => !open && setDialog({ kind: "none" })}
-        onPick={handlePlatformPicked}
+        workspaceId={workspaceId}
         workspaceSlug={workspaceSlug}
-      />
-
-      <ConnectMakeDialog
-        open={dialog.kind === "make"}
-        onOpenChange={(open) => !open && setDialog({ kind: "none" })}
-        workspaceId={workspaceId}
+        presetPlatform={dialog.kind === "add" ? dialog.presetPlatform : null}
         defaultDisplayName={
-          dialog.kind === "make" ? dialog.defaultDisplayName : "Primary"
+          dialog.kind === "add" ? dialog.defaultDisplayName : "Primary"
         }
-        allowRenameAccount={dialog.kind === "make" ? dialog.allowRename : false}
-      />
-      <ConnectN8nDialog
-        open={dialog.kind === "n8n"}
-        onOpenChange={(open) => !open && setDialog({ kind: "none" })}
-        workspaceId={workspaceId}
-        defaultDisplayName={
-          dialog.kind === "n8n" ? dialog.defaultDisplayName : "Primary"
+        allowRenameAccount={
+          dialog.kind === "add" ? dialog.allowRenameAccount : false
         }
-        allowRenameAccount={dialog.kind === "n8n" ? dialog.allowRename : false}
       />
     </div>
   );
@@ -202,85 +180,6 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         <Plus className="mr-1.5 h-4 w-4" />
         Add connection
       </Button>
-    </div>
-  );
-}
-
-interface PlatformPickerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onPick: (slug: CatalogSlug) => void;
-  workspaceSlug: string;
-}
-
-function PlatformPickerDialog({
-  open,
-  onOpenChange,
-  onPick,
-  workspaceSlug,
-}: PlatformPickerDialogProps) {
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onClick={() => onOpenChange(false)}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="platform-picker-title"
-        className="w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2
-          id="platform-picker-title"
-          className="text-lg font-semibold text-foreground"
-        >
-          Choose a platform
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          We&apos;ll walk you through authentication next.
-        </p>
-        <div className="mt-4 grid gap-2">
-          {CONNECTED_PLATFORMS.map((entry) => (
-            <button
-              key={entry.slug}
-              type="button"
-              onClick={() => {
-                onOpenChange(false);
-                onPick(entry.slug);
-              }}
-              className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 text-left transition-colors hover:border-foreground/40 hover:bg-card/70"
-            >
-              <ConnectorLogo slug={entry.slug} size={28} />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">
-                  {entry.label}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {entry.authTypeLabel}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-xs text-muted-foreground">
-          <Link
-            href={`/app/${workspaceSlug}/roadmap`}
-            className="hover:text-foreground"
-            onClick={() => onOpenChange(false)}
-          >
-            Don&apos;t see yours? Request a platform →
-          </Link>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="hover:text-foreground"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
