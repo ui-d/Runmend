@@ -36,17 +36,28 @@ export default async function WorkspaceDashboard({ params }: PageProps) {
   const workspace = await getWorkspaceBySlug(supabase, workspaceSlug);
   if (!workspace) redirect("/app");
 
-  const [pulse, rollupIssues, activity, profileCards, connections] = await Promise.all([
+  const [
+    pulse,
+    rollupIssues,
+    activity,
+    profileCards,
+    connections,
+    memberCount,
+  ] = await Promise.all([
     getWorkspacePulse(supabase, workspace.id),
     getWorkspaceOpenIssues(supabase, workspace.id),
     getWorkspaceActivity(supabase, workspace.id, 12),
     getWorkspaceProfileCards(supabase, workspace.id),
     getWorkspaceConnections(supabase, workspace.id),
+    getMemberCount(supabase, workspace.id),
   ]);
 
   const detectorRollup = rollupDetectorStates(rollupIssues);
   const hasAnyProfiles = profileCards.length > 0;
   const hasActiveConnection = connections.some((c) => c.status === "active");
+  // `getWorkspacePulse` already computes nextSyncAt from active schedules,
+  // so a non-null value is proof at least one schedule is active.
+  const hasSchedule = pulse.nextSyncAt !== null;
 
   // Show onboarding wizard only when the workspace is effectively empty.
   const showOnboarding = !hasAnyProfiles;
@@ -61,9 +72,6 @@ export default async function WorkspaceDashboard({ params }: PageProps) {
   });
   const previewProfiles = orderedProfiles.slice(0, PROFILE_PREVIEW_COUNT);
   const extraProfileCount = Math.max(0, orderedProfiles.length - PROFILE_PREVIEW_COUNT);
-
-  const hasSchedule = await hasAnyActiveSchedule(supabase, profileCards.map((p) => p.id));
-  const memberCount = await getMemberCount(supabase, workspace.id);
   const nextStepsState = {
     hasConnection: hasActiveConnection,
     hasProfile: hasAnyProfiles,
@@ -140,19 +148,6 @@ export default async function WorkspaceDashboard({ params }: PageProps) {
       <NextStepsStrip workspaceSlug={workspaceSlug} state={nextStepsState} />
     </div>
   );
-}
-
-async function hasAnyActiveSchedule(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  profileIds: string[],
-): Promise<boolean> {
-  if (profileIds.length === 0) return false;
-  const { count } = await supabase
-    .from("audit_schedules")
-    .select("profile_id", { count: "exact", head: true })
-    .eq("is_active", true)
-    .in("profile_id", profileIds);
-  return (count ?? 0) > 0;
 }
 
 async function getMemberCount(

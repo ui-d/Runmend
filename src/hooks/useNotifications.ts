@@ -6,28 +6,22 @@ import type { Database } from "@/lib/database.types";
 
 type NotificationRow = Database["public"]["Tables"]["notifications"]["Row"];
 
-export function useNotifications(userId: string, workspaceId: string) {
-  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function useNotifications(
+  userId: string,
+  workspaceId: string,
+  initialNotifications: NotificationRow[] = [],
+) {
+  const [notifications, setNotifications] =
+    useState<NotificationRow[]>(initialNotifications);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  // Fetch initial notifications
+  // Re-seed state when workspace changes (user switched workspaces).
+  // Initial notifications come from the server on first render, so no
+  // HTTP round-trip is needed on mount.
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(
-          `/api/notifications?workspaceId=${workspaceId}&limit=20`
-        );
-        const data = await res.json();
-        if (data.notifications) {
-          setNotifications(data.notifications);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    load();
+    setNotifications(initialNotifications);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
   // Subscribe to Realtime for new notifications
@@ -77,5 +71,5 @@ export function useNotifications(userId: string, workspaceId: string) {
     });
   }, [workspaceId]);
 
-  return { notifications, unreadCount, isLoading, markAsRead, markAllAsRead };
+  return { notifications, unreadCount, markAsRead, markAllAsRead };
 }

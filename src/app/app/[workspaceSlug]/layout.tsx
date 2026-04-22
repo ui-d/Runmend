@@ -7,6 +7,7 @@ import { UserMenu } from "@/components/auth/UserMenu";
 import { NotificationBell } from "@/components/app/NotificationBell";
 import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { getWorkspaceSubscription } from "@/lib/queries/subscriptions";
+import { getUserNotifications } from "@/lib/queries/notifications";
 import { resolveEffectivePlan } from "@/lib/stripe";
 
 interface LayoutProps {
@@ -26,20 +27,32 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps)
   const workspace = await getWorkspaceBySlug(supabase, workspaceSlug);
   if (!workspace) notFound();
 
-  const allWorkspaces = await getUserWorkspaces(supabase);
+  const [
+    allWorkspaces,
+    profileRes,
+    subscription,
+    profileCountRes,
+    initialNotifications,
+  ] = await Promise.all([
+    getUserWorkspaces(supabase),
+    supabase
+      .from("users")
+      .select("full_name")
+      .eq("id", user.id)
+      .single(),
+    getWorkspaceSubscription(supabase, workspace.id),
+    supabase
+      .from("automation_profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", workspace.id),
+    getUserNotifications(supabase, user.id, {
+      workspaceId: workspace.id,
+      limit: 20,
+    }),
+  ]);
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("full_name")
-    .eq("id", user.id)
-    .single();
-
-  const subscription = await getWorkspaceSubscription(supabase, workspace.id);
-
-  const { count: profileCount } = await supabase
-    .from("automation_profiles")
-    .select("id", { count: "exact", head: true })
-    .eq("workspace_id", workspace.id);
+  const profile = profileRes.data;
+  const profileCount = profileCountRes.count;
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -64,6 +77,7 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps)
               userId={user.id}
               workspaceId={workspace.id}
               workspaceSlug={workspaceSlug}
+              initialNotifications={initialNotifications}
             />
             <UserMenu
               email={user.email ?? ""}

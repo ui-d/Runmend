@@ -4,20 +4,25 @@ import { useState, useRef, useEffect } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
+import type { Database } from "@/lib/database.types";
+
+type NotificationRow = Database["public"]["Tables"]["notifications"]["Row"];
 
 interface NotificationBellProps {
   userId: string;
   workspaceId: string;
   workspaceSlug: string;
+  initialNotifications?: NotificationRow[];
 }
 
 export function NotificationBell({
   userId,
   workspaceId,
   workspaceSlug,
+  initialNotifications = [],
 }: NotificationBellProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications(userId, workspaceId);
+    useNotifications(userId, workspaceId, initialNotifications);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

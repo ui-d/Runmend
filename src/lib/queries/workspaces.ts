@@ -1,3 +1,4 @@
+import { cache } from "@/lib/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
@@ -5,7 +6,7 @@ type Client = SupabaseClient<Database>;
 type WorkspaceRow = Database["public"]["Tables"]["workspaces"]["Row"];
 type WorkspaceMemberRow = Database["public"]["Tables"]["workspace_members"]["Row"];
 
-export async function getUserWorkspaces(supabase: Client) {
+export const getUserWorkspaces = cache(async (supabase: Client) => {
   const { data, error } = await supabase
     .from("workspaces")
     .select("*, workspace_members!inner(role)")
@@ -13,9 +14,9 @@ export async function getUserWorkspaces(supabase: Client) {
 
   if (error) throw error;
   return data as (WorkspaceRow & { workspace_members: Pick<WorkspaceMemberRow, "role">[] })[];
-}
+});
 
-export async function getWorkspaceBySlug(supabase: Client, slug: string) {
+export const getWorkspaceBySlug = cache(async (supabase: Client, slug: string) => {
   const { data, error } = await supabase
     .from("workspaces")
     .select("*")
@@ -24,7 +25,7 @@ export async function getWorkspaceBySlug(supabase: Client, slug: string) {
 
   if (error && error.code !== "PGRST116") throw error;
   return data;
-}
+});
 
 export async function createWorkspace(
   supabase: Client,

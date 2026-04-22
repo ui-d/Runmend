@@ -1,8 +1,12 @@
+import { cache } from "@/lib/cache";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/database.types";
 
-export async function createClient() {
+// Cached per request so repeated `await createClient()` calls in a single
+// render share one Supabase instance. This also makes downstream
+// `React.cache()` wrappers actually dedupe on `(supabase, key)` arguments.
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
@@ -26,4 +30,4 @@ export async function createClient() {
       },
     }
   );
-}
+});

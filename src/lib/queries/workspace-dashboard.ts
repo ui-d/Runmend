@@ -1,3 +1,4 @@
+import { cache } from "@/lib/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { isIssueType, type IssueType } from "@/lib/detectors";
@@ -95,10 +96,10 @@ export interface WorkspaceProfileTriageRow extends WorkspaceProfileCardData {
  * delta vs. oldest snapshot in that window, worst profile, and roll-up totals.
  * Missing days are carry-forward so the line stays continuous.
  */
-export async function getWorkspacePulse(
+export const getWorkspacePulse = cache(async (
   supabase: Client,
   workspaceId: string,
-): Promise<WorkspacePulse> {
+): Promise<WorkspacePulse> => {
   const { data: profiles, error: profilesError } = await supabase
     .from("automation_profiles")
     .select("id, name, health_score")
@@ -141,63 +142,68 @@ export async function getWorkspacePulse(
   since.setUTCDate(since.getUTCDate() - 30);
   const sinceDate = since.toISOString().slice(0, 10);
 
-  const { data: snapshots, error: snapError } = await supabase
-    .from("profile_health_snapshots")
-    .select("profile_id, captured_on, health_score")
-    .in("profile_id", profileIds)
-    .gte("captured_on", sinceDate)
-    .order("captured_on", { ascending: true });
+  const [
+    snapshotsRes,
+    connectionsRes,
+    schedulesRes,
+    issuesRes,
+    automationCountRes,
+  ] = await Promise.all([
+    supabase
+      .from("profile_health_snapshots")
+      .select("profile_id, captured_on, health_score")
+      .in("profile_id", profileIds)
+      .gte("captured_on", sinceDate)
+      .order("captured_on", { ascending: true }),
+    supabase
+      .from("platform_connections")
+      .select("last_synced_at")
+      .eq("workspace_id", workspaceId),
+    supabase
+      .from("audit_schedules")
+      .select("next_run_at, is_active, profile_id")
+      .eq("is_active", true)
+      .in("profile_id", profileIds),
+    supabase
+      .from("automation_issues")
+      .select("id, severity, status")
+      .in("profile_id", profileIds)
+      .eq("status", "open"),
+    supabase
+      .from("automations")
+      .select("id", { count: "exact", head: true })
+      .in("profile_id", profileIds),
+  ]);
 
-  if (snapError) throw snapError;
-  const snapRows = snapshots ?? [];
+  if (snapshotsRes.error) throw snapshotsRes.error;
+  if (connectionsRes.error) throw connectionsRes.error;
+  if (schedulesRes.error) throw schedulesRes.error;
+  if (issuesRes.error) throw issuesRes.error;
+  if (automationCountRes.error) throw automationCountRes.error;
 
+  const snapRows = snapshotsRes.data ?? [];
   const trend = buildWorkspaceTrend(snapRows, profileIds);
   const trackingSince = trend[0]?.captured_on ?? null;
-  const delta30d =
-    trend.length >= 2 ? currentScore - trend[0].score : null;
-
-  const { data: connections, error: connError } = await supabase
-    .from("platform_connections")
-    .select("last_synced_at")
-    .eq("workspace_id", workspaceId);
-  if (connError) throw connError;
+  const delta30d = trend.length >= 2 ? currentScore - trend[0].score : null;
 
   const lastSyncAt =
-    (connections ?? [])
+    (connectionsRes.data ?? [])
       .map((c) => c.last_synced_at)
       .filter((t): t is string => !!t)
       .sort()
       .reverse()[0] ?? null;
 
-  const { data: schedules, error: schedError } = await supabase
-    .from("audit_schedules")
-    .select("next_run_at, is_active, profile_id")
-    .eq("is_active", true)
-    .in("profile_id", profileIds);
-  if (schedError) throw schedError;
-
   const nextSyncAt =
-    (schedules ?? [])
+    (schedulesRes.data ?? [])
       .map((s) => s.next_run_at)
       .filter((t): t is string => !!t)
       .sort()[0] ?? null;
 
-  const { data: issueRows, error: issuesError } = await supabase
-    .from("automation_issues")
-    .select("id, severity, status")
-    .in("profile_id", profileIds)
-    .eq("status", "open");
-  if (issuesError) throw issuesError;
-
-  const totalOpenIssues = issueRows?.length ?? 0;
-  const totalCriticalIssues =
-    issueRows?.filter((i) => i.severity === "critical").length ?? 0;
-
-  const { count: automationCount, error: autoError } = await supabase
-    .from("automations")
-    .select("id", { count: "exact", head: true })
-    .in("profile_id", profileIds);
-  if (autoError) throw autoError;
+  const issueRows = issuesRes.data ?? [];
+  const totalOpenIssues = issueRows.length;
+  const totalCriticalIssues = issueRows.filter(
+    (i) => i.severity === "critical",
+  ).length;
 
   return {
     currentScore,
@@ -206,13 +212,13 @@ export async function getWorkspacePulse(
     trackingSince,
     worstProfile,
     totalProfiles: profileRows.length,
-    totalAutomations: automationCount ?? 0,
+    totalAutomations: automationCountRes.count ?? 0,
     totalOpenIssues,
     totalCriticalIssues,
     lastSyncAt,
     nextSyncAt,
   };
-}
+});
 
 /**
  * Workspace-wide open-issue rows, ready to feed rollupDetectorStates().
@@ -450,17 +456,18 @@ export async function getWorkspaceProfileCards(
   }>;
   if (profileRows.length === 0) return [];
 
-  const sparklines = await getProfileSparklines(supabase, workspaceId, 14);
-
-  const { data: connections, error: connError } = await supabase
-    .from("platform_connections")
-    .select("platform, last_synced_at, zone, team_id, instance_url, status")
-    .eq("workspace_id", workspaceId);
-  if (connError) throw connError;
+  const [sparklines, connectionsRes] = await Promise.all([
+    getProfileSparklines(supabase, workspaceId, 14),
+    supabase
+      .from("platform_connections")
+      .select("platform, last_synced_at, zone, team_id, instance_url, status")
+      .eq("workspace_id", workspaceId),
+  ]);
+  if (connectionsRes.error) throw connectionsRes.error;
 
   const syncByPlatform = new Map<Platform, string>();
   const urlByPlatform = new Map<Platform, string>();
-  for (const row of connections ?? []) {
+  for (const row of connectionsRes.data ?? []) {
     const platform = row.platform as Platform;
     if (row.last_synced_at) {
       const existing = syncByPlatform.get(platform);

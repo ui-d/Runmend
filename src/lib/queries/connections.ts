@@ -146,13 +146,21 @@ export async function getConnectionsWithHealth(
 
   const connIds = rows.map((r) => r.id);
 
-  const { data: automations, error: autoErr } = await supabase
-    .from("automations")
-    .select("id, connection_id, profile_id")
-    .in("connection_id", connIds);
-  if (autoErr) throw autoErr;
+  const [automationsRes, boundProfilesRes] = await Promise.all([
+    supabase
+      .from("automations")
+      .select("id, connection_id, profile_id")
+      .in("connection_id", connIds),
+    supabase
+      .from("automation_profiles")
+      .select("id, name, connection_id")
+      .eq("workspace_id", workspaceId)
+      .in("connection_id", connIds),
+  ]);
+  if (automationsRes.error) throw automationsRes.error;
+  if (boundProfilesRes.error) throw boundProfilesRes.error;
 
-  const automationRows = automations ?? [];
+  const automationRows = automationsRes.data ?? [];
   const automationIds = automationRows.map((a) => a.id);
 
   const automationsByConnection = new Map<string, string[]>();
@@ -168,12 +176,7 @@ export async function getConnectionsWithHealth(
     profilesByConnection.set(a.connection_id, profiles);
   }
 
-  const { data: boundProfiles, error: boundErr } = await supabase
-    .from("automation_profiles")
-    .select("id, name, connection_id")
-    .eq("workspace_id", workspaceId)
-    .in("connection_id", connIds);
-  if (boundErr) throw boundErr;
+  const boundProfiles = boundProfilesRes.data;
 
   const profileNameById = new Map<string, string>();
   for (const p of boundProfiles ?? []) {

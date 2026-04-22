@@ -1,13 +1,14 @@
+import { cache } from "@/lib/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
 type Client = SupabaseClient<Database>;
 type SubscriptionRow = Database["public"]["Tables"]["subscriptions"]["Row"];
 
-export async function getWorkspaceSubscription(
+export const getWorkspaceSubscription = cache(async (
   supabase: Client,
   workspaceId: string
-): Promise<SubscriptionRow | null> {
+): Promise<SubscriptionRow | null> => {
   const { data, error } = await supabase
     .from("subscriptions")
     .select("*")
@@ -16,7 +17,7 @@ export async function getWorkspaceSubscription(
 
   if (error) throw error;
   return data;
-}
+});
 
 export async function upsertSubscription(
   supabase: Client,

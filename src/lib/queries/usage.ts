@@ -39,16 +39,10 @@ export async function getWorkspaceUsage(
   const { start, end } = currentMonthBoundaries();
   const limits = PLAN_LIMITS[plan];
 
-  const [{ count: profileCount }, { data: profileIdsRow }] = await Promise.all([
-    supabase
-      .from("automation_profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("workspace_id", workspaceId),
-    supabase
-      .from("automation_profiles")
-      .select("id")
-      .eq("workspace_id", workspaceId),
-  ]);
+  const { data: profileIdsRow, count: profileCount } = await supabase
+    .from("automation_profiles")
+    .select("id", { count: "exact" })
+    .eq("workspace_id", workspaceId);
 
   const profileIds = (profileIdsRow ?? []).map((p) => p.id);
   let diagnosticsCount = 0;
