@@ -9,9 +9,15 @@ import { CONNECTION_SYNC_INTERVAL_MINUTES } from "@/lib/connections/catalog";
 type Client = SupabaseClient<Database>;
 type ConnectionRow = Database["public"]["Tables"]["platform_connections"]["Row"];
 
+export interface LinkedProfile {
+  id: string;
+  name: string;
+}
+
 export interface ConnectionHealth extends ConnectionRow {
   automationCount: number;
   profileCount: number;
+  linkedProfiles: LinkedProfile[];
   executions24h: number;
   executions24hFailed: number;
   failureRate24h: number | null;
@@ -162,6 +168,37 @@ export async function getConnectionsWithHealth(
     profilesByConnection.set(a.connection_id, profiles);
   }
 
+  const { data: boundProfiles, error: boundErr } = await supabase
+    .from("automation_profiles")
+    .select("id, name, connection_id")
+    .eq("workspace_id", workspaceId)
+    .in("connection_id", connIds);
+  if (boundErr) throw boundErr;
+
+  const profileNameById = new Map<string, string>();
+  for (const p of boundProfiles ?? []) {
+    if (!p.connection_id) continue;
+    profileNameById.set(p.id, p.name);
+    const profiles = profilesByConnection.get(p.connection_id) ?? new Set<string>();
+    profiles.add(p.id);
+    profilesByConnection.set(p.connection_id, profiles);
+  }
+
+  const profileIdsNeedingName = new Set<string>();
+  for (const set of Array.from(profilesByConnection.values())) {
+    for (const id of Array.from(set)) {
+      if (!profileNameById.has(id)) profileIdsNeedingName.add(id);
+    }
+  }
+  if (profileIdsNeedingName.size > 0) {
+    const { data: legacyProfiles, error: legacyErr } = await supabase
+      .from("automation_profiles")
+      .select("id, name")
+      .in("id", Array.from(profileIdsNeedingName));
+    if (legacyErr) throw legacyErr;
+    for (const p of legacyProfiles ?? []) profileNameById.set(p.id, p.name);
+  }
+
   const nowMs = Date.now();
   const windowStart = new Date(nowMs - 24 * 60 * 60 * 1000);
 
@@ -236,10 +273,15 @@ export async function getConnectionsWithHealth(
         ).toISOString()
       : null;
 
+    const linkedProfiles: LinkedProfile[] = Array.from(profileSet)
+      .map((id) => ({ id, name: profileNameById.get(id) ?? "Untitled profile" }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     return {
       ...row,
       automationCount: automationIdsForConn.length,
       profileCount: profileSet.size,
+      linkedProfiles,
       executions24h: exec?.total ?? 0,
       executions24hFailed: exec?.failed ?? 0,
       failureRate24h,

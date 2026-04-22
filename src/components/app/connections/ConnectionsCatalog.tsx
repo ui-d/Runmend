@@ -1,26 +1,23 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import {
-  AVAILABLE_CONNECTORS,
-  COMING_SOON_CONNECTORS,
   CONNECTED_PLATFORMS,
   isLiveSlug,
   type CatalogSlug,
 } from "@/lib/connections/catalog";
 import type { ConnectionHealth } from "@/lib/queries/connections";
 import { ConnectionHealthCard } from "./ConnectionHealthCard";
-import { AvailableConnectorTile } from "./AvailableConnectorTile";
-import { ComingSoonTile } from "./ComingSoonTile";
-import { RequestConnectorInput } from "./RequestConnectorInput";
+import { ConnectorLogo } from "./ConnectorLogo";
 import { ConnectMakeDialog } from "@/components/app/ConnectMakeDialog";
 import { ConnectN8nDialog } from "@/components/app/ConnectN8nDialog";
-import { toggleInterestAction } from "@/app/app/[workspaceSlug]/connections/actions";
+import { Button } from "@/components/ui/button";
 
 interface ConnectionsCatalogProps {
   workspaceId: string;
+  workspaceSlug: string;
   connections: ConnectionHealth[];
   voteCounts: Record<string, number>;
   userVotedSlugs: string[];
@@ -28,21 +25,16 @@ interface ConnectionsCatalogProps {
 
 type DialogState =
   | { kind: "none" }
+  | { kind: "picker" }
   | { kind: "make"; defaultDisplayName: string; allowRename: boolean }
   | { kind: "n8n"; defaultDisplayName: string; allowRename: boolean };
 
 export function ConnectionsCatalog({
   workspaceId,
+  workspaceSlug,
   connections,
-  voteCounts,
-  userVotedSlugs,
 }: ConnectionsCatalogProps) {
-  const router = useRouter();
   const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
-  const [pending, startTransition] = useTransition();
-  const [localVoteCounts, setLocalVoteCounts] = useState(voteCounts);
-  const [localVoted, setLocalVoted] = useState(new Set(userVotedSlugs));
-  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
 
   const connectedByPlatform = useMemo(() => {
     const map = new Map<string, ConnectionHealth[]>();
@@ -57,152 +49,122 @@ export function ConnectionsCatalog({
   const platformLabelBySlug = useMemo(() => {
     const map = new Map<string, string>();
     for (const entry of CONNECTED_PLATFORMS) map.set(entry.slug, entry.label);
-    for (const entry of AVAILABLE_CONNECTORS) map.set(entry.slug, entry.label);
     return map;
   }, []);
 
-  const connectedCount = connections.length;
+  const platformGroups = useMemo(() => {
+    return CONNECTED_PLATFORMS.map((entry) => ({
+      slug: entry.slug,
+      label: entry.label,
+      connections: connectedByPlatform.get(entry.slug) ?? [],
+    })).filter((group) => group.connections.length > 0);
+  }, [connectedByPlatform]);
 
-  function openConnectDialog(
+  function openAuthDialog(
     slug: CatalogSlug,
-    options: { defaultDisplayName: string; allowRename: boolean }
+    options: { defaultDisplayName: string; allowRename: boolean },
   ) {
-    if (slug === "make") {
-      setDialog({ kind: "make", ...options });
-    } else if (slug === "n8n") {
-      setDialog({ kind: "n8n", ...options });
-    }
+    if (slug === "make") setDialog({ kind: "make", ...options });
+    else if (slug === "n8n") setDialog({ kind: "n8n", ...options });
   }
 
-  function handleConnect(slug: CatalogSlug) {
+  function handleAddAnother(slug: string) {
     if (!isLiveSlug(slug)) return;
     const existing = connectedByPlatform.get(slug) ?? [];
-    openConnectDialog(slug, {
-      defaultDisplayName: existing.length === 0 ? "Primary" : suggestNextName(existing),
-      allowRename: existing.length > 0,
-    });
-  }
-
-  function handleAddAccount(slug: string) {
-    if (!isLiveSlug(slug)) return;
-    const existing = connectedByPlatform.get(slug) ?? [];
-    openConnectDialog(slug, {
+    openAuthDialog(slug, {
       defaultDisplayName: suggestNextName(existing),
       allowRename: true,
     });
   }
 
-  function handleVoteToggle(slug: string) {
-    setPendingSlug(slug);
-    const wasVoted = localVoted.has(slug);
-    const nextVoted = new Set(localVoted);
-    if (wasVoted) nextVoted.delete(slug);
-    else nextVoted.add(slug);
-    setLocalVoted(nextVoted);
-    setLocalVoteCounts((prev) => ({
-      ...prev,
-      [slug]: Math.max(0, (prev[slug] ?? 0) + (wasVoted ? -1 : 1)),
-    }));
+  function handleAddConnection() {
+    setDialog({ kind: "picker" });
+  }
 
-    startTransition(async () => {
-      const result = await toggleInterestAction(workspaceId, slug);
-      const label = platformLabelBySlug.get(slug) ?? slug;
-      if (!result.ok) {
-        setLocalVoted(localVoted);
-        setLocalVoteCounts(voteCounts);
-        toast.error(result.error ?? "Could not record your vote");
-      } else {
-        if (typeof result.count === "number") {
-          setLocalVoteCounts((prev) => ({ ...prev, [slug]: result.count ?? 0 }));
-        }
-        toast.success(
-          result.voted
-            ? `We'll notify you when ${label} ships`
-            : `Removed your vote for ${label}`,
-        );
-      }
-      setPendingSlug(null);
-      router.refresh();
+  function handlePlatformPicked(slug: CatalogSlug) {
+    if (!isLiveSlug(slug)) return;
+    const existing = connectedByPlatform.get(slug) ?? [];
+    openAuthDialog(slug, {
+      defaultDisplayName:
+        existing.length === 0 ? "Primary" : suggestNextName(existing),
+      allowRename: existing.length > 0,
     });
   }
 
-  const availableUnconnected = AVAILABLE_CONNECTORS.filter(
-    (entry) =>
-      !(connectedByPlatform.get(entry.slug)?.length ?? 0) || entry.comingSoon,
-  );
-
   return (
     <div className="space-y-8">
-      <section className="space-y-3">
-        <SectionHeader
-          title={`Connected · ${connectedCount}`}
-          hint={
-            connectedCount === 0
-              ? "0 of 1 free-tier slots used"
-              : `${connectedCount} of 1 free-tier slots used`
-          }
-        />
-        {connectedCount === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/60 bg-card/20 p-6 text-sm text-muted-foreground">
-            No connections yet. Pick a platform below to start monitoring.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {connections.map((conn) => (
-              <ConnectionHealthCard
-                key={conn.id}
-                connection={conn}
-                platformLabel={
-                  platformLabelBySlug.get(conn.platform) ?? conn.platform
-                }
-                onAddAccount={() => handleAddAccount(conn.platform)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Connections</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Platforms Runmend is monitoring. Sync runs every 15 minutes.
+          </p>
+        </div>
+        <Button onClick={handleAddConnection}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          Add connection
+        </Button>
+      </header>
 
-      <section className="space-y-3">
-        <SectionHeader
-          title={`Available · ${availableUnconnected.length}`}
-          hint="Live integrations you can add now, plus upcoming ones you can vote for."
-        />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {availableUnconnected.map((entry) => (
-            <AvailableConnectorTile
-              key={entry.slug}
-              entry={entry}
-              onConnect={handleConnect}
-              onNotifyMe={handleVoteToggle}
-              voteCount={localVoteCounts[entry.slug] ?? 0}
-              hasVoted={localVoted.has(entry.slug)}
-            />
+      {platformGroups.length === 0 ? (
+        <EmptyState onAdd={handleAddConnection} />
+      ) : (
+        <div className="space-y-8">
+          {platformGroups.map((group) => (
+            <section key={group.slug} className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ConnectorLogo slug={group.slug} size={20} />
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {group.label}
+                  </h2>
+                  <span className="text-xs text-muted-foreground">
+                    · {group.connections.length} account
+                    {group.connections.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddAnother(group.slug)}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <Plus className="h-3 w-3" aria-hidden />
+                  Add another
+                </button>
+              </div>
+              <div className="space-y-3">
+                {group.connections.map((conn) => (
+                  <ConnectionHealthCard
+                    key={conn.id}
+                    connection={conn}
+                    platformLabel={
+                      platformLabelBySlug.get(conn.platform) ?? conn.platform
+                    }
+                    workspaceSlug={workspaceSlug}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
-      </section>
+      )}
 
-      <section className="space-y-3">
-        <SectionHeader
-          title={`Coming soon · ${COMING_SOON_CONNECTORS.length}`}
-          hint="Tap Notify me on the platforms you want next. We ship what the most people vote for."
-        />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {COMING_SOON_CONNECTORS.map((entry) => (
-            <ComingSoonTile
-              key={entry.slug}
-              entry={entry}
-              voteCount={localVoteCounts[entry.slug] ?? 0}
-              hasVoted={localVoted.has(entry.slug)}
-              onToggle={handleVoteToggle}
-              pending={pending && pendingSlug === entry.slug}
-            />
-          ))}
-        </div>
-      </section>
+      <footer className="border-t border-border/60 pt-4 text-xs text-muted-foreground">
+        Looking for a platform we don&apos;t support yet?{" "}
+        <Link
+          href={`/app/${workspaceSlug}/roadmap`}
+          className="font-medium text-foreground hover:underline"
+        >
+          See our roadmap →
+        </Link>
+      </footer>
 
-      <section>
-        <RequestConnectorInput workspaceId={workspaceId} />
-      </section>
+      <PlatformPickerDialog
+        open={dialog.kind === "picker"}
+        onOpenChange={(open) => !open && setDialog({ kind: "none" })}
+        onPick={handlePlatformPicked}
+        workspaceSlug={workspaceSlug}
+      />
 
       <ConnectMakeDialog
         open={dialog.kind === "make"}
@@ -226,13 +188,99 @@ export function ConnectionsCatalog({
   );
 }
 
-function SectionHeader({ title, hint }: { title: string; hint: string }) {
+function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
+    <div className="rounded-xl border border-dashed border-border/60 bg-card/20 p-10 text-center">
+      <h2 className="text-base font-semibold text-foreground">
+        No connections yet
       </h2>
-      <p className="text-[11px] text-muted-foreground/80">{hint}</p>
+      <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+        Connect a Make.com or n8n account to start monitoring scenarios and
+        workflows for silent failures.
+      </p>
+      <Button className="mt-4" onClick={onAdd}>
+        <Plus className="mr-1.5 h-4 w-4" />
+        Add connection
+      </Button>
+    </div>
+  );
+}
+
+interface PlatformPickerDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPick: (slug: CatalogSlug) => void;
+  workspaceSlug: string;
+}
+
+function PlatformPickerDialog({
+  open,
+  onOpenChange,
+  onPick,
+  workspaceSlug,
+}: PlatformPickerDialogProps) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={() => onOpenChange(false)}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="platform-picker-title"
+        className="w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2
+          id="platform-picker-title"
+          className="text-lg font-semibold text-foreground"
+        >
+          Choose a platform
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          We&apos;ll walk you through authentication next.
+        </p>
+        <div className="mt-4 grid gap-2">
+          {CONNECTED_PLATFORMS.map((entry) => (
+            <button
+              key={entry.slug}
+              type="button"
+              onClick={() => {
+                onOpenChange(false);
+                onPick(entry.slug);
+              }}
+              className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 text-left transition-colors hover:border-foreground/40 hover:bg-card/70"
+            >
+              <ConnectorLogo slug={entry.slug} size={28} />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  {entry.label}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {entry.authTypeLabel}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-xs text-muted-foreground">
+          <Link
+            href={`/app/${workspaceSlug}/roadmap`}
+            className="hover:text-foreground"
+            onClick={() => onOpenChange(false)}
+          >
+            Don&apos;t see yours? Request a platform →
+          </Link>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="hover:text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

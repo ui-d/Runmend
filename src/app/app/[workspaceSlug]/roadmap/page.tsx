@@ -2,7 +2,6 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceBySlug } from "@/lib/queries/workspaces";
 import {
-  getConnectionsWithHealth,
   getInterestVoteCounts,
   getUserVotes,
 } from "@/lib/queries/connections";
@@ -10,13 +9,13 @@ import {
   AVAILABLE_CONNECTORS,
   COMING_SOON_CONNECTORS,
 } from "@/lib/connections/catalog";
-import { ConnectionsCatalog } from "@/components/app/connections/ConnectionsCatalog";
+import { RoadmapCatalog } from "@/components/app/connections/RoadmapCatalog";
 
 interface PageProps {
   params: Promise<{ workspaceSlug: string }>;
 }
 
-export default async function ConnectionsPage({ params }: PageProps) {
+export default async function RoadmapPage({ params }: PageProps) {
   const { workspaceSlug } = await params;
   const supabase = await createClient();
   const {
@@ -33,17 +32,15 @@ export default async function ConnectionsPage({ params }: PageProps) {
     ...COMING_SOON_CONNECTORS.map((e) => e.slug),
   ];
 
-  const [connections, voteCounts, userVotes] = await Promise.all([
-    getConnectionsWithHealth(supabase, workspace.id),
+  const [voteCounts, userVotes] = await Promise.all([
     getInterestVoteCounts(supabase, workspace.id, votableSlugs),
     getUserVotes(supabase, workspace.id, user.id),
   ]);
 
   return (
-    <ConnectionsCatalog
+    <RoadmapCatalog
       workspaceId={workspace.id}
       workspaceSlug={workspaceSlug}
-      connections={connections}
       voteCounts={voteCounts}
       userVotedSlugs={Array.from(userVotes)}
     />

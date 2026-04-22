@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, RefreshCw, Unplug, Plus, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, RefreshCw, Unplug, CheckCircle, AlertCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { ConnectionHealth } from "@/lib/queries/connections";
 import { ConnectorLogo } from "./ConnectorLogo";
@@ -15,7 +16,7 @@ import { syncConnectionAction } from "@/app/app/[workspaceSlug]/connections/acti
 interface ConnectionHealthCardProps {
   connection: ConnectionHealth;
   platformLabel: string;
-  onAddAccount: () => void;
+  workspaceSlug: string;
 }
 
 function statusCopy(status: string, errorMessage: string | null): {
@@ -55,7 +56,7 @@ function formatNextSync(iso: string | null): string {
 export function ConnectionHealthCard({
   connection,
   platformLabel,
-  onAddAccount,
+  workspaceSlug,
 }: ConnectionHealthCardProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -196,6 +197,31 @@ export function ConnectionHealthCard({
         />
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-5 py-3">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Profiles
+        </span>
+        {connection.linkedProfiles.length === 0 ? (
+          <Link
+            href={`/app/${workspaceSlug}/profiles/new?connectionId=${connection.id}`}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-border/60 bg-background/40 px-2.5 py-1 text-[11px] text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+          >
+            <UserPlus className="h-3 w-3" aria-hidden />
+            Create a profile to start monitoring
+          </Link>
+        ) : (
+          connection.linkedProfiles.map((profile) => (
+            <Link
+              key={profile.id}
+              href={`/app/${workspaceSlug}/profiles/${profile.id}`}
+              className="inline-flex items-center rounded-full border border-border/60 bg-background/60 px-2.5 py-1 text-[11px] font-medium text-foreground hover:border-foreground/60 hover:bg-background"
+            >
+              {profile.name}
+            </Link>
+          ))
+        )}
+      </div>
+
       <div className="px-5 py-3">
         <ConnectionSyncSparkline buckets={connection.sparkline24h} />
       </div>
@@ -239,10 +265,6 @@ export function ConnectionHealthCard({
               <CheckCircle className="mr-1 h-3 w-3" />
             )}
             Test
-          </Button>
-          <Button size="sm" variant="outline" onClick={onAddAccount}>
-            <Plus className="mr-1 h-3 w-3" />
-            Add account
           </Button>
           <Button
             size="sm"
