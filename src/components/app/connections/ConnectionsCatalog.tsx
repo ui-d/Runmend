@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   AVAILABLE_CONNECTORS,
   COMING_SOON_CONNECTORS,
@@ -105,12 +106,20 @@ export function ConnectionsCatalog({
 
     startTransition(async () => {
       const result = await toggleInterestAction(workspaceId, slug);
+      const label = platformLabelBySlug.get(slug) ?? slug;
       if (!result.ok) {
-        // revert
         setLocalVoted(localVoted);
         setLocalVoteCounts(voteCounts);
-      } else if (typeof result.count === "number") {
-        setLocalVoteCounts((prev) => ({ ...prev, [slug]: result.count ?? 0 }));
+        toast.error(result.error ?? "Could not record your vote");
+      } else {
+        if (typeof result.count === "number") {
+          setLocalVoteCounts((prev) => ({ ...prev, [slug]: result.count ?? 0 }));
+        }
+        toast.success(
+          result.voted
+            ? `We'll notify you when ${label} ships`
+            : `Removed your vote for ${label}`,
+        );
       }
       setPendingSlug(null);
       router.refresh();

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw, Unplug, Plus, CheckCircle, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import type { ConnectionHealth } from "@/lib/queries/connections";
 import { ConnectorLogo } from "./ConnectorLogo";
 import { ConnectionSyncSparkline } from "./ConnectionSyncSparkline";
@@ -60,7 +61,8 @@ export function ConnectionHealthCard({
   const [pending, startTransition] = useTransition();
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+
+  const connectionLabel = `${platformLabel} · ${connection.display_name}`;
 
   const status = statusCopy(connection.status, connection.error_message);
   const tone = toneClass(status.tone);
@@ -82,43 +84,53 @@ export function ConnectionHealthCard({
         : "text-red-400";
 
   function handleSync() {
-    setActionError(null);
+    const toastId = toast.loading(`Syncing ${connectionLabel}…`);
     startTransition(async () => {
       const result = await syncConnectionAction(connection.id);
-      if (!result.ok) setActionError(result.error ?? "Sync failed");
+      if (!result.ok) {
+        toast.error(result.error ?? "Sync failed", { id: toastId });
+      } else {
+        const count = result.profilesSynced ?? 0;
+        toast.success(
+          `Synced ${connectionLabel}${count > 0 ? ` · ${count} profile${count === 1 ? "" : "s"}` : ""}`,
+          { id: toastId },
+        );
+      }
       router.refresh();
     });
   }
 
   async function handleTest() {
-    setActionError(null);
     setTesting(true);
+    const toastId = toast.loading(`Testing ${connectionLabel}…`);
     try {
       const res = await fetch(`/api/connections/${connection.id}/test`, {
         method: "POST",
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
+      const body = await res.json().catch(() => null);
+      if (!res.ok || body?.ok === false) {
         throw new Error(body?.error ?? "Test failed");
       }
+      toast.success(`${connectionLabel} is healthy`, { id: toastId });
       router.refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Test failed");
+      toast.error(err instanceof Error ? err.message : "Test failed", { id: toastId });
     } finally {
       setTesting(false);
     }
   }
 
   async function handleDisconnect() {
-    if (!window.confirm(`Disconnect ${platformLabel} · ${connection.display_name}?`)) return;
-    setActionError(null);
+    if (!window.confirm(`Disconnect ${connectionLabel}?`)) return;
     setDisconnecting(true);
+    const toastId = toast.loading(`Disconnecting ${connectionLabel}…`);
     try {
       const res = await fetch(`/api/connections/${connection.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to disconnect");
+      toast.success(`${connectionLabel} disconnected`, { id: toastId });
       router.refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Disconnect failed");
+      toast.error(err instanceof Error ? err.message : "Disconnect failed", { id: toastId });
     } finally {
       setDisconnecting(false);
     }
@@ -192,12 +204,6 @@ export function ConnectionHealthCard({
         <div className="border-t border-red-500/30 bg-red-500/5 px-5 py-3 text-xs text-red-300">
           <p className="font-medium">Last sync failed</p>
           <p className="mt-0.5 text-red-300/80">{connection.error_message}</p>
-        </div>
-      )}
-
-      {actionError && (
-        <div className="border-t border-red-500/30 bg-red-500/5 px-5 py-2 text-xs text-red-300">
-          {actionError}
         </div>
       )}
 

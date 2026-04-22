@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,8 @@ export function ConnectN8nDialog({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to connect");
 
+      const label = displayName.trim() || "Primary";
+      toast.success(`n8n · ${label} connected`);
       onOpenChange(false);
       setApiKey("");
       setInstanceUrl("");
@@ -68,6 +71,7 @@ export function ConnectN8nDialog({
       const message =
         err instanceof Error ? err.message : "Connection failed";
       setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

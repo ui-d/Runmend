@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Send, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { requestConnectorAction } from "@/app/app/[workspaceSlug]/connections/actions";
@@ -34,8 +35,11 @@ export function RequestConnectorInput({ workspaceId }: RequestConnectorInputProp
       if (result.ok) {
         setValue("");
         setSuccess(true);
+        toast.success(`Request for ${slug} added to roadmap`);
       } else {
-        setError(result.error ?? "Failed to submit request");
+        const message = result.error ?? "Failed to submit request";
+        setError(message);
+        toast.error(message);
       }
     });
   }

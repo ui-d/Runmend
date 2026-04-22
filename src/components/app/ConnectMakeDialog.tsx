@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,8 @@ export function ConnectMakeDialog({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to connect");
 
+      const label = displayName.trim() || "Primary";
+      toast.success(`Make.com · ${label} connected`);
       onOpenChange(false);
       setApiKey("");
       router.refresh();
@@ -67,6 +70,7 @@ export function ConnectMakeDialog({
       const message =
         err instanceof Error ? err.message : "Connection failed";
       setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
