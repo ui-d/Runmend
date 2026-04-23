@@ -1,6 +1,11 @@
 # Runmend Production Readiness Plan
 
-**Status**: pre-launch • **Stan Supabase**: `hrcctyebejialsbdyyle` = production • **Stripe**: soft-launch w test mode → cutover na live • **Domena**: kupiona (uzupełnij `<YOUR_DOMAIN>` w przykładach poniżej)
+**Status**: pre-launch • **Stan Supabase**: `hrcctyebejialsbdyyle` = production • **Stripe**: soft-launch w test mode → cutover na live • **Domena**: kupiona (uzupełnij `<YOUR_DOMAIN>` w przykładach poniżej) • **Analytics**: PostHog minimal z EU consent banner (kod gotowy, klucze w A1)
+
+**Zrobione na branchu `main`** (w trakcie tej sesji):
+- `1ef76f4` — LTD refund reconciliation (retry + failed_refunds + email alert)
+- `32a6740` — A4 cron schedule, A6 Sentry release tracking, A7 `/api/health`
+- `458ce33` — cookie consent banner + PostHog consent gating
 
 Plan jest podzielony na cztery bloki. **Blok A = MUSI być zielony zanim podeślesz link pierwszemu beta userowi** (test mode). **Blok B = MUSI być zielony w dniu cutover na live Stripe**. Blok C = w pierwszym tygodniu po launch. Blok D = post-launch, kiedy będzie czas.
 
@@ -33,7 +38,8 @@ Dashboard → Project → Settings → Environment Variables. Scope: **Productio
 | `NEXT_PUBLIC_SENTRY_DSN` | z Sentry → Project Settings → Client Keys | sentry.io |
 | `SENTRY_ORG` / `SENTRY_PROJECT` | slugi | sentry.io |
 | `SENTRY_AUTH_TOKEN` | `sntrys_…` — uprawnienie `project:releases` | sentry.io → User Auth Tokens |
-| `NEXT_PUBLIC_POSTHOG_KEY` / `_HOST` | jeśli chcesz analytics od start; inaczej pomiń | posthog.com |
+| `NEXT_PUBLIC_POSTHOG_KEY` | `phc_…` (publishable project key) | posthog.com → Project → Settings → API |
+| `NEXT_PUBLIC_POSTHOG_HOST` | **EU zalecany**: `https://eu.i.posthog.com` (data residency + GDPR) | posthog.com |
 
 **Weryfikacja**: `vercel env ls production | wc -l` ≥ 17. Trigger deploy po dodaniu — jeśli `assertProductionEnv()` znajdzie brak, deploy padnie przed uruchomieniem (zgodne z `instrumentation.ts:7-11`).
 
@@ -57,21 +63,11 @@ Site URL: `https://<YOUR_DOMAIN>`.
 
 **Weryfikacja**: signup na prod, link z email kieruje na prod, nie na localhost.
 
-### A4. Vercel Cron — zdefiniuj w `vercel.json`
+### A4. Vercel Cron — zdefiniuj w `vercel.json` ✅ DONE (commit `32a6740`)
 
-Obecny `vercel.json` jest pusty → Cron w ogóle nie odpala. Ustaw harmonogram co 15 min na `/api/cron/sync`:
+`vercel.json` ma teraz harmonogram co 15 min na `/api/cron/sync`. Vercel automatycznie dorzuca `Authorization: Bearer ${CRON_SECRET}` header → `src/app/api/cron/sync/route.ts:20-24` to waliduje. **Wymaga Vercel Pro** (free tier ma 1 cron, wystarczy).
 
-```json
-{
-  "crons": [
-    { "path": "/api/cron/sync", "schedule": "*/15 * * * *" }
-  ]
-}
-```
-
-**Wymaga Vercel Pro** (free tier ma 1 cron, wystarczy). Vercel automatycznie dorzuca `Authorization: Bearer ${CRON_SECRET}` header → `src/app/api/cron/sync/route.ts:20-24` to waliduje.
-
-**Weryfikacja**: po deployu Vercel → Project → Crons pokazuje wpis; Vercel → Logs pokazuje GET /api/cron/sync co 15 min z 200 response.
+**Weryfikacja po deploy**: Vercel → Project → Crons pokazuje wpis; Vercel → Logs pokazuje GET /api/cron/sync co 15 min z 200 response.
 
 ### A5. Resend — weryfikacja domeny (DKIM/SPF)
 
@@ -79,33 +75,17 @@ Resend → Domains → Add Domain `<YOUR_DOMAIN>`. Dodaj 3 rekordy DNS (TXT SPF,
 
 **Weryfikacja**: Resend dashboard pokazuje "Verified"; test: wymuś LTD oversold path lokalnie z prod key → email dociera do inbox (nie spam).
 
-### A6. Sentry — source maps + release tracking
+### A6. Sentry — source maps + release tracking ✅ DONE (commit `32a6740`)
 
-Masz już `withSentryConfig(nextConfig, {...})` w `next.config.mjs:39-48`. Jeśli `SENTRY_AUTH_TOKEN` jest w Vercel (A1), auto-upload source maps działa na każdy build. Dodaj tylko release tagging:
+`next.config.mjs` ma teraz `release.name = VERCEL_GIT_COMMIT_SHA`. Jeśli `SENTRY_AUTH_TOKEN` jest w Vercel (A1), auto-upload source maps odpala się na każdy build i tagguje release commit SHA.
 
-W `next.config.mjs`, `withSentryConfig` options:
-```js
-release: {
-  name: process.env.VERCEL_GIT_COMMIT_SHA ?? undefined,
-}
-```
+**Weryfikacja po deploy**: Sentry → Releases pokazuje nowy release ze skojarzonymi source maps; przy błędzie stack trace pokazuje oryginalne pliki TS, nie `chunks/*.js`.
 
-**Weryfikacja**: następny deploy → Sentry → Releases pokazuje nowy release ze skojarzonymi source maps; przy błędzie stack trace pokazuje oryginalne pliki TS, nie `chunks/*.js`.
+### A7. `/api/health` endpoint (smoke + uptime probe) ✅ DONE (commit `32a6740`)
 
-### A7. `/api/health` endpoint (smoke + uptime probe)
+`src/app/api/health/route.ts` zwraca `{status:"ok", ts}`. Używany w B6 przez uptime monitor.
 
-Brak. Dodaj minimalny:
-
-```ts
-// src/app/api/health/route.ts
-import { NextResponse } from "next/server";
-export const dynamic = "force-dynamic";
-export async function GET() {
-  return NextResponse.json({ status: "ok", ts: new Date().toISOString() });
-}
-```
-
-**Weryfikacja**: `curl https://<YOUR_DOMAIN>/api/health` → `{"status":"ok",…}`.
+**Weryfikacja po deploy**: `curl https://<YOUR_DOMAIN>/api/health` → `{"status":"ok",…}`.
 
 ### A8. Smoke test full flow na prod
 
@@ -128,6 +108,26 @@ Vercel ma Instant Rollback z UI (Deployments → ostatni good → Promote). Zapi
 - kto ma uprawnienia do promote (tylko ty, chyba że dodasz teammate'a)
 
 **Weryfikacja**: wymuś bad deploy lokalnie (np. syntax error na preview) → zobacz że rollback działa w < 30s.
+
+### A10. PostHog analytics + EU cookie consent ⚠️ CZĘŚCIOWO DONE (commit `458ce33`)
+
+**Kod gotowy**:
+- `src/components/CookieConsent.tsx` — fixed-bottom banner, localStorage-persisted, Accept/Decline
+- `src/components/PostHogProvider.tsx` — gating: `posthog.init()` odpala się **tylko** po `Accept` (custom event + storage); `Decline` i brak decyzji = zero trackingu
+- Banner pokazuje się raz per browser; po wyborze znika, decyzja trzymana w `localStorage["runmend-consent"]`
+
+**Co zostało ręcznie**:
+1. Zarejestruj się na posthog.com (EU region — data residency). Stwórz projekt.
+2. Dodaj `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com` do Vercel env (A1).
+3. **Ważne gap**: banner linkuje do `/privacy` które jeszcze nie istnieje (B4). Przed publikacją launchu albo stwórz stronę privacy policy albo zmień link. 404 w bannerze to gorszy UX niż brak linku.
+
+**Weryfikacja po deploy**:
+- Pierwszy visit na `https://<YOUR_DOMAIN>` → banner widoczny na dole
+- Click `Accept` → PostHog → Live events pokazuje pageview w < 5s
+- Click `Decline`, refresh, przejdź przez kilka stron → PostHog → Live events **nic** nie pokazuje
+- `localStorage` w DevTools: klucz `runmend-consent` = `accept` lub `decline`
+
+**Scope (wybrany minimal)**: tylko pageview + pageleave auto-capture. Brak `posthog.identify()` po login, brak custom events (signup, ltd_checkout, oversold). Dodaj jeżeli będziesz chciał pełny funnel — patrz C-block dodatek niżej.
 
 ---
 
@@ -232,6 +232,15 @@ Te items były out-of-scope dzisiejszego fixu (commit 1ef76f4), ale są do zrobi
 - **F7**: `settings/loading.tsx:13` `length: 7` → `length: 9` — **30-sek fix**
 - **F3**: polling `/api/billing/ltd-status` dla delayed-webhook UX — jeśli >1 user zgłosi "paid but no seat"
 
+### C7. PostHog — upgrade z minimal do standard (opcjonalne)
+
+Obecnie tylko pageview/pageleave. Jeśli chcesz pełny LTD funnel w PH dashboard, dorzuć:
+- `posthog.identify(user.id, { email })` w auth callback / po login
+- Capture events na kluczowych akcjach: `signup_completed`, `connection_added`, `profile_created`, `ltd_checkout_started`, `ltd_checkout_completed`, `oversold_refund`
+- Guard każdy capture pod `typeof posthog !== "undefined"` (bo PH init dopiero po Accept consent)
+
+**Decyzja**: zrób jeżeli w pierwszym tygodniu nie rozumiesz co user robi przed checkoutem. Na start minimal wystarczy.
+
 ---
 
 ## Block D — Post-launch, gdy będzie czas | NICE TO HAVE
@@ -245,44 +254,34 @@ Te items były out-of-scope dzisiejszego fixu (commit 1ef76f4), ale są do zrobi
 - **Load test**: k6 lub artillery na kluczowe endpointy (`/api/cron/sync`, diagnostic, signup)
 - **Penetration testing**: nawet 2h z OWASP ZAP baseline scan
 - **Terms consent gating**: checkbox na signup "I agree to ToS + Privacy" (niektóre jurysdykcje wymagają)
-- **Cookie consent banner**: jeśli PostHog włączysz, potrzebny dla EU (cookiebot.com lub własny)
+- **PostHog full**: session recording + feature flags + reverse proxy (patrz C7 dla standard upgrade najpierw)
+- **Consent preferences UI**: "change cookie preferences" link w footerze żeby user mógł zmienić zdanie (obecnie tylko localStorage clear)
 
 ---
 
 ## Kolejność działań (rekomendacja)
 
-**Dzień 0 (dziś / jutro)**:
-1. A1 — wszystkie env vars w Vercel (30-60 min)
-2. A2 — domena + SSL (wait time 1-24h zależnie od DNS TTL)
-3. A5 — Resend DKIM/SPF (wait time 1-24h)
-4. A4, A6, A7 — code changes (30 min total) — commitnij razem: `chore: production readiness (cron, health, release tracking)`
-5. A3 — Supabase redirect URLs
-6. A8 — smoke test
-7. A9 — zapisz rollback procedure
+**Dzień 0 (dziś / jutro)** — kod gotowy (A4/A6/A7/A10 ✅), zostają dashboardy:
+1. **A1** — wszystkie env vars w Vercel (30-60 min)
+   - W tym: zarejestruj się na posthog.com (EU region), weź `phc_…` key
+2. **A2** — domena + SSL (wait time 1-24h zależnie od DNS TTL)
+3. **A5** — Resend DKIM/SPF (wait time 1-24h)
+4. **A3** — Supabase redirect URLs
+5. **A8** — smoke test (włącz test Accept/Decline bannera w DevTools)
+6. **A9** — zapisz rollback procedure
 
 **Dni 1-3 (soft-launch beta, test mode)**:
-- 2-5 test checkoutów, obserwuj Sentry/logs
-- B1 — Stripe business verification (równolegle, 1-3 dni)
+- 2-5 test checkoutów, obserwuj Sentry/logs/PostHog
+- **B1** — Stripe business verification (równolegle, 1-3 dni)
 
 **Dzień ~4 (cutover)**:
-8. B2-B4 — live keys + webhook + legal pages
-9. B5 — LTD seat count decyzja
-10. B6 — uptime monitor
-11. **public launch** 🚀
+7. **B2-B4** — live keys + webhook + **legal pages (w tym /privacy — wymagana przez banner!)**
+8. **B5** — LTD seat count decyzja
+9. **B6** — uptime monitor
+10. **public launch** 🚀
 
 **Tydzień 2**:
-12. C1-C6 — observability + GDPR + backlog
+11. **C1-C7** — observability + GDPR + backlog + PostHog standard upgrade (opcjonalnie)
 
 **Później**:
-13. D-block gdy będzie czas
-
----
-
-## Quick wins które mogę zaimplementować teraz (jeśli chcesz)
-
-Z Block A są 3 items które mogę zrobić kodem bez twoich decyzji:
-- **A4** — `vercel.json` z cron schedule
-- **A6** — `release.name` w `withSentryConfig`
-- **A7** — `/api/health` endpoint
-
-Daj znać: „zrób A4/A6/A7" i commitnę je razem. Reszta to twoje ręczne akcje w dashboardach (Vercel / Stripe / Supabase / Resend / DNS).
+12. **D-block** gdy będzie czas
