@@ -47,5 +47,8 @@ export default hasSentry
       project: process.env.SENTRY_PROJECT,
       silent: !process.env.CI,
       widenClientFileUpload: true,
+      release: {
+        name: process.env.VERCEL_GIT_COMMIT_SHA ?? undefined,
+      },
     })
   : nextConfig;
