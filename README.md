@@ -87,7 +87,7 @@ Apply the Supabase migrations in order:
 supabase db push
 ```
 
-Or apply manually from `supabase/migrations/` (22 migrations covering schema, RLS, indexes, RPC functions, and cron jobs).
+Or apply manually from `supabase/migrations/` (23 migrations covering schema, RLS, indexes, RPC functions, cron jobs, multi-connection profile binding, LTD/billing tables, and Stripe webhook idempotency).
 
 ### Development
 
@@ -115,8 +115,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 - `src/lib/supabase/` — Four Supabase clients: `client.ts` (browser), `server.ts` (SSR), `admin.ts` (service role, bypasses RLS), `middleware.ts` (session refresh)
 - `src/lib/queries/` — Typed data access functions (workspaces, profiles, connections, diagnostics, notifications, schedules, subscriptions). All DB access flows through here.
-- `src/lib/database.types.ts` — Supabase-generated types including RPC function signatures (`update_automation_stats`, `update_profile_scenario_count`)
-- `supabase/migrations/` — 22 migrations: schema, RLS policies, indexes, RPC batch functions, pg_cron sync job, LTD/billing tables, webhook event dedup
+- `src/lib/database.types.ts` — Supabase-generated types including RPC function signatures (`update_automation_stats`, `update_profile_scenario_count`, `claim_ltd_seat`, `assert_profile_connection_match`)
+- `supabase/migrations/` — 23 migrations: schema, RLS policies, indexes, RPC batch functions, pg_cron sync job, profile health snapshots, multi-connection profile binding, LTD/billing tables, webhook event dedup
 
 ### Platform Integrations
 

@@ -45,8 +45,8 @@ npm start            # Production server
 
 - `src/lib/supabase/` — Four Supabase clients: `client.ts` (browser), `server.ts` (SSR), `admin.ts` (service role, bypasses RLS), `middleware.ts` (session refresh)
 - `src/lib/queries/` — Typed data access functions (workspaces, profiles, connections, diagnostics, notifications, schedules, subscriptions). All DB access goes through here.
-- `src/lib/database.types.ts` — Supabase-generated types (includes RPC function types for `update_automation_stats` and `update_profile_scenario_count`)
-- `supabase/migrations/` — 12 migration files defining all tables, RLS policies, indexes, RPC functions, and cron jobs
+- `src/lib/database.types.ts` — Supabase-generated types (includes RPC function types for `update_automation_stats`, `update_profile_scenario_count`, `claim_ltd_seat`, and `assert_profile_connection_match`)
+- `supabase/migrations/` — 23 migration files defining all tables, RLS policies, indexes, RPC functions, cron jobs, multi-connection profile binding, LTD/billing tables, and Stripe webhook idempotency
 
 ### Platform Integration Layer
 
@@ -89,6 +89,9 @@ npm start            # Production server
 - **Workspace auth**: API routes accepting `workspaceId` must call `getWorkspaceMembership()` after auth check, before any data operations.
 - **Retry logic**: External API calls in platform adapters use `fetchWithRetry()` from `retry.ts` (3 retries, exponential backoff with jitter).
 - **Bulk operations**: Sync engine uses bulk upserts and RPC functions (`update_automation_stats`, `update_profile_scenario_count`) instead of per-row loops.
+- **Profile-connection binding**: `automation_profiles.connection_id` (FK → `platform_connections`) is the source of truth for which credentials a profile syncs through. The `assert_profile_connection_match` trigger enforces same-workspace + same-platform integrity. Sync resolves connection via `connection_id`; legacy rows fall back to platform-match.
+- **Per-request dedupe**: Server queries used by both layout and page (e.g. `createClient`, workspace/subscription/pulse loaders) are wrapped with `cache` from `src/lib/cache.ts` (a `React.cache` shim that no-ops in Vitest). Use it on any RSC fetch shared across layout + child route to avoid double DB hits per render.
+- **Loading skeletons**: Each authenticated route segment ships a `loading.tsx` so navigation paints instantly while server data resolves. Add one when introducing a new segment.
 
 ## Environment Variables
 
@@ -105,10 +108,12 @@ See `.env.example`. Required for full functionality:
 
 ## Current State
 
-All 8 original phases + production hardening + ship-readiness work complete:
+All 8 original phases + production hardening + ship-readiness work complete, plus several post-ship product waves:
 - **Phases 1-8**: Supabase foundation, auth, workspace CRUD, platform connections (Make.com + n8n), sync engine, AI diagnostics, notifications, Stripe billing
 - **Phase 9**: Security hardening (input validation, workspace auth, redirect protection), performance (bulk DB ops, pagination), reliability (retry with backoff)
-- **Phase 10 (Ship)**: Zapier removed from v1 (unstable API), scheduled sync via Vercel Cron (`/api/cron/sync` every 15 min), test suite (76 tests, 65%+ coverage), Sentry error tracking, security headers, GitHub Actions CI
+- **Phase 10 (Ship)**: Zapier removed from v1 (unstable API), scheduled sync via Vercel Cron (`/api/cron/sync` every 15 min), Sentry error tracking, security headers, GitHub Actions CI
+- **Post-ship waves**: public `/pricing`, marketing homepage redesign, profiles-as-table + profile-detail redesign with Make deep-links, connections-as-catalog with per-platform groups + 2-col grid, settings 9-section left-rail with alerts config, LTD plan + invoice list + VAT mirroring, sonner toast system, profile-snooze, profile health snapshots for pulse trending, Make zone + team_id support, **multi-connection profile binding** (one profile per client credential), unified add-connection modal, create-profile modal, profile-connection widget on profile detail (visible + editable), 90%+ coverage gate
+- **Latest perf wave**: per-request `React.cache` dedupe on Supabase client + workspace/subscription/pulse queries, parallelized waterfalls in pulse/connections/profile-cards loaders, route-level `loading.tsx` skeletons for instant navigation paint, server-rendered initial notifications (NotificationBell no longer fetches on mount), `experimental.optimizePackageImports` for `lucide-react`
 
 Stripe requires test/live keys + price IDs in env vars. Zapier may be re-added later with Partner Program OAuth access.
 
