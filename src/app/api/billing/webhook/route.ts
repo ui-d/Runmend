@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { withBackoff } from "@/lib/platform-adapters/retry";
+import { sendLtdRefundAlert } from "@/lib/email/alert";
 import type Stripe from "stripe";
 import type { PlanId } from "@/lib/stripe";
 
@@ -73,15 +75,48 @@ export async function POST(request: NextRequest) {
               : session.payment_intent?.id;
           if (paymentIntentId) {
             try {
-              await stripe.refunds.create({
-                payment_intent: paymentIntentId,
-                reason: "requested_by_customer",
-              });
+              await withBackoff(
+                () =>
+                  stripe.refunds.create({
+                    payment_intent: paymentIntentId,
+                    reason: "requested_by_customer",
+                  }),
+                { attempts: 3, baseDelayMs: 500 },
+              );
             } catch (refundErr) {
-              Sentry.captureException(refundErr, {
-                tags: { route: "billing/webhook", step: "ltd_refund" },
+              const errorMessage =
+                refundErr instanceof Error
+                  ? refundErr.message
+                  : "Unknown refund error";
+              const customerEmail =
+                session.customer_details?.email ?? null;
+
+              await admin.from("failed_refunds").insert({
+                session_id: session.id,
+                amount: session.amount_total ?? 0,
+                customer_email: customerEmail,
+                error_message: errorMessage,
               });
-              console.error("LTD oversold refund failed", refundErr);
+
+              await sendLtdRefundAlert({
+                email: customerEmail,
+                sessionId: session.id,
+                amount: session.amount_total ?? 0,
+                errorMessage,
+              });
+
+              Sentry.captureException(refundErr, {
+                level: "fatal",
+                tags: { route: "billing/webhook", step: "ltd_refund" },
+                extra: {
+                  sessionId: session.id,
+                  amount: session.amount_total,
+                },
+              });
+              console.error(
+                "LTD oversold refund failed after all retries",
+                refundErr,
+              );
             }
           }
           return NextResponse.json({ received: true, ltd: "oversold" });

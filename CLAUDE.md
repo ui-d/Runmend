@@ -104,6 +104,7 @@ See `.env.example`. Required for full functionality:
 - `CRON_SECRET` — Vercel Cron authentication (`openssl rand -hex 32`)
 - `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` — Sentry error tracking (optional)
 - `RESEND_API_KEY` — Email notifications (optional)
+- `LTD_ALERT_EMAIL` / `LTD_ALERT_FROM` — Destination and sender for critical LTD refund failure alerts (optional; alert is a no-op if either is missing)
 - `CLAUDE_MODEL` — Claude model for diagnostics (optional; defaults to `claude-sonnet-4-5-20250929`)
 
 ## Current State

@@ -635,6 +635,33 @@ export type Database = {
           },
         ]
       }
+      failed_refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_email: string | null
+          error_message: string
+          id: string
+          session_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_email?: string | null
+          error_message: string
+          id?: string
+          session_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_email?: string | null
+          error_message?: string
+          id?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
       stripe_webhook_events: {
         Row: {
           id: string

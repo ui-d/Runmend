@@ -10,6 +10,7 @@ import { TEST_UUID } from "@/test/factories";
 // reassigning these variables.
 const stripeMock = createStripeMock();
 let sbMock: SupabaseMock = createSupabaseMock();
+const sendLtdRefundAlertMock = vi.fn();
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => sbMock.client,
@@ -25,8 +26,33 @@ vi.mock("@/lib/stripe", async () => {
   };
 });
 
+// Short-circuit exponential backoff in tests: run fn up to `attempts` times
+// with no delay. Keeps the retry semantic intact without sleeping.
+vi.mock("@/lib/platform-adapters/retry", () => ({
+  withBackoff: async <T,>(
+    fn: () => Promise<T>,
+    opts: { attempts?: number } = {},
+  ): Promise<T> => {
+    const attempts = opts.attempts ?? 3;
+    let lastError: unknown;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError;
+  },
+}));
+
+vi.mock("@/lib/email/alert", () => ({
+  sendLtdRefundAlert: sendLtdRefundAlertMock,
+}));
+
 beforeEach(() => {
   sbMock = createSupabaseMock();
+  sendLtdRefundAlertMock.mockReset();
   // Reset call state on each Stripe fn mock; keep the same functions so the
   // client reference stays stable for the vi.mock factory above.
   stripeMock.checkoutSessionsCreate.mockReset();
@@ -280,25 +306,59 @@ describe("POST /api/billing/webhook", () => {
     expect(listTaxIds).toHaveBeenCalledWith("cus_1", { limit: 1 });
   });
 
-  it("swallows refund errors on LTD oversold", async () => {
+  it("reconciles failed LTD refunds into failed_refunds and alerts", async () => {
     stripeMock.constructEvent.mockReturnValue(
       makeEvent("checkout.session.completed", {
+        id: "cs_ltd_1",
         mode: "payment",
         customer: "cus_ltd",
         payment_intent: "pi_1",
+        amount_total: 9900,
         metadata: { ltd: "true", workspace_id: TEST_UUID },
-        customer_details: { email: "x@x.com" },
+        customer_details: { email: "buyer@test.com" },
       }),
     );
     sbMock.setRpc("claim_ltd_seat", null);
-    const refundsCreate = vi.fn().mockRejectedValue(new Error("refund failed"));
-    (stripeMock.client as unknown as { refunds: { create: typeof refundsCreate } }).refunds = {
-      create: refundsCreate,
-    };
+    sbMock.setTable("failed_refunds", []);
+    const refundsCreate = vi
+      .fn()
+      .mockRejectedValue(new Error("refund failed"));
+    (
+      stripeMock.client as unknown as {
+        refunds: { create: typeof refundsCreate };
+      }
+    ).refunds = { create: refundsCreate };
+
     const res = await callWebhook("{}");
+
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ltd).toBe("oversold");
+
+    // 3 retry attempts
+    expect(refundsCreate).toHaveBeenCalledTimes(3);
+
+    // Row persisted to failed_refunds for manual reconciliation
+    const inserts = sbMock
+      .getCalls()
+      .filter((c) => c.table === "failed_refunds" && c.op === "insert");
+    expect(inserts).toHaveLength(1);
+    const payload = inserts[0].payload as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      session_id: "cs_ltd_1",
+      amount: 9900,
+      customer_email: "buyer@test.com",
+      error_message: "refund failed",
+    });
+
+    // Alert fired once with the same metadata
+    expect(sendLtdRefundAlertMock).toHaveBeenCalledTimes(1);
+    expect(sendLtdRefundAlertMock).toHaveBeenCalledWith({
+      email: "buyer@test.com",
+      sessionId: "cs_ltd_1",
+      amount: 9900,
+      errorMessage: "refund failed",
+    });
   });
 
   it("swallows customer.updated tax mirror failure", async () => {

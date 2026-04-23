@@ -48,6 +48,33 @@ export async function withRetry<T>(
 }
 
 /**
+ * Generic exponential-backoff wrapper for any async function. Unlike
+ * `withRetry`, this does not thread an AbortSignal through — use it for
+ * SDK calls (Stripe, Anthropic, etc.) that manage their own timeouts.
+ * `attempts` is the total number of tries, not retries on top of an initial
+ * call, so `attempts: 3` runs the fn up to three times.
+ */
+export async function withBackoff<T>(
+  fn: () => Promise<T>,
+  options: { attempts?: number; baseDelayMs?: number } = {},
+): Promise<T> {
+  const { attempts = 3, baseDelayMs = 500 } = options;
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (i === attempts - 1) break;
+      const delay =
+        baseDelayMs * Math.pow(2, i) * (0.5 + Math.random() * 0.5);
+      await sleep(delay);
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Fetch with retry for platform APIs. Retries on 429/5xx and network errors.
  */
 export async function fetchWithRetry(
