@@ -18,6 +18,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    {
+      url: `${baseUrl}/vs-claude-cowork`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
     ...profiles.map((profile) => ({
       url: `${baseUrl}/dashboard/${profile.id}`,
       lastModified: new Date(),

@@ -56,6 +56,9 @@ export async function Navbar() {
           <Link href="/#pricing" className="hover:text-foreground transition-colors">
             Pricing
           </Link>
+          <Link href="/vs-claude-cowork" className="hover:text-foreground transition-colors">
+            vs. Claude
+          </Link>
           <Link href="/#demo" className="hover:text-foreground transition-colors">
             Demo
           </Link>
