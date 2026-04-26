@@ -1,6 +1,6 @@
 # Runmend — Current State (as of 2026-04-23)
 
-Runmend is an AI-powered automation health monitoring SaaS. It audits workflow configurations across **Make.com** and **n8n**, detects silent failures / expired credentials / broken webhooks / empty field mappings, and generates AI diagnostic reports via Claude. Built for agencies and ops teams running many client automations.
+Runmend is production monitoring for **Make.com** and **n8n** agencies. Multi-zone Make (us1/eu1/eu2/us2) + self-hosted n8n, six failure detectors per audit, Claude-written post-mortems, per-channel alerting. Built for ops teams running many client automations in production where being told before the client tells you matters.
 
 **Repo**: `/Users/dawidnawrocki/Desktop/runmend`
 **Branch**: `main` (clean)

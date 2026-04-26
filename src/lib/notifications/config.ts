@@ -39,8 +39,8 @@ export const ALL_EVENT_TYPES: NotificationEventType[] = [
 
 export const EVENT_TYPE_LABELS: Record<NotificationEventType, { label: string; description: string }> = {
   issue_detected: {
-    label: "New issue detected",
-    description: "A new critical, warning, or info issue was flagged on a profile.",
+    label: "New issue on a client",
+    description: "A new critical, warning, or info issue was flagged on a client profile.",
   },
   credential_expiring: {
     label: "Credential expiring",
@@ -51,8 +51,8 @@ export const EVENT_TYPE_LABELS: Record<NotificationEventType, { label: string; d
     description: "Runmend couldn't reach a connected platform.",
   },
   audit_complete: {
-    label: "Audit completed",
-    description: "A scheduled sync + audit finished for a profile.",
+    label: "Client audit complete",
+    description: "A scheduled audit finished for a client profile.",
   },
 };
 

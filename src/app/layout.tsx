@@ -12,26 +12,29 @@ const siteUrl = "https://runmend.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Runmend — Automation Health Monitor",
+    default: "Runmend — Production monitoring for Make.com and n8n agencies",
     template: "%s | Runmend",
   },
   description:
-    "Your automations are probably broken. You just don't know it yet. Runmend scans your Make.com and n8n workflows for silent failures, expiring credentials, and broken mappings.",
+    "Catch silent failures across every client's Make.com (4 zones) and self-hosted n8n workspace. Six failure detectors, AI post-mortems, per-channel alerting — built for agencies running automations in production.",
   keywords: [
-    "automation monitoring",
+    "Make.com monitoring",
+    "n8n monitoring",
+    "automation alerting",
+    "agency automation tools",
+    "client automation monitoring",
+    "self-hosted n8n monitoring",
     "Make.com",
     "n8n",
-    "workflow health",
     "silent failures",
     "credential expiration",
-    "automation audit",
   ],
   authors: [{ name: "Runmend" }],
   creator: "Runmend",
   openGraph: {
-    title: "Runmend — Automation Health Monitor",
+    title: "Runmend — Production monitoring for Make.com and n8n agencies",
     description:
-      "Your automations are probably broken. You just don't know it yet. Runmend catches silent failures before your clients do.",
+      "Built for agencies running client automations in production. Multi-zone Make.com + self-hosted n8n, six failure detectors, AI post-mortems. Get told before the client does.",
     url: siteUrl,
     siteName: "Runmend",
     locale: "en_US",
@@ -39,9 +42,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Runmend — Automation Health Monitor",
+    title: "Runmend — Production monitoring for Make.com and n8n agencies",
     description:
-      "Your automations are probably broken. You just don't know it yet. Runmend catches silent failures before your clients do.",
+      "Built for agencies running client automations in production. Multi-zone Make.com + self-hosted n8n, six failure detectors, AI post-mortems. Get told before the client does.",
   },
   robots: {
     index: true,

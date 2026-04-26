@@ -14,7 +14,7 @@ interface PlanCardData {
 export const PRICING_PLANS: PlanCardData[] = [
   {
     id: "free",
-    description: "For individuals testing the waters",
+    description: "One client, light usage — for trying Runmend before you commit",
     price: 0,
     highlighted: false,
     cta: { label: "Get started free", href: "/signup" },
@@ -28,7 +28,7 @@ export const PRICING_PLANS: PlanCardData[] = [
   },
   {
     id: "starter",
-    description: "For freelancers managing a few clients",
+    description: "Solo operators with a small client book",
     price: PLAN_PRICES.starter.monthly,
     highlighted: false,
     cta: { label: "Start free trial", href: "/signup" },
@@ -43,7 +43,7 @@ export const PRICING_PLANS: PlanCardData[] = [
   },
   {
     id: "pro",
-    description: "For agencies scaling automation work",
+    description: "Agencies running client automations in production",
     price: PLAN_PRICES.pro.monthly,
     highlighted: true,
     cta: { label: "Start free trial", href: "/signup" },
@@ -59,7 +59,7 @@ export const PRICING_PLANS: PlanCardData[] = [
   },
   {
     id: "enterprise",
-    description: "For teams with advanced needs",
+    description: "Multi-team ops with custom volume and sourcing",
     price: null,
     highlighted: false,
     cta: { label: "Contact sales", href: "mailto:hello@runmend.com" },

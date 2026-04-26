@@ -1,16 +1,20 @@
 # Runmend
 
-Runmend is an AI-powered automation health monitoring SaaS that audits workflow configurations across **Make.com** and **n8n**. It detects silent failures, expired credentials, broken webhooks, and empty field mappings, then generates AI diagnostic reports using the Claude API.
+Runmend is production monitoring for **Make.com** and **n8n** agencies. Connect every client account across all four Make zones (us1/eu1/eu2/us2) plus self-hosted n8n, and Runmend runs six failure detectors on each scheduled audit, then has Claude write the post-mortem before you open the tab.
 
 ## What It Does
 
-- **Monitors automation workflows** across Make.com (multi-zone) and self-hosted n8n
-- **Detects silent failures** — expired credentials, broken webhooks, empty field mappings, zombie automations, error spikes
-- **Generates AI diagnostic reports** using Claude Sonnet to prioritize fixes and quantify business impact
-- **Scores automation health** on a weighted 0-100 scale (error rate 40%, inactive ratio 20%, failure trend 20%, coverage 20%)
-- **Multi-tenant workspaces** with role-based access, encrypted platform connections, and scheduled audits
-- **Scheduled sync** via Vercel Cron every 15 minutes with deduped notifications
-- **Lifetime Deal (LTD) plan** alongside subscription tiers, plus VAT-aware invoices and billing portal
+- **Multi-zone, multi-account** — Make.com us1/eu1/eu2/us2 + n8n self-hosted, one profile per client credential
+- **Six failure detectors** — silent failure, high error rate, error spike, consecutive failures, zombie automation, credential expiration
+- **AI post-mortem per audit** — Claude Sonnet writes a three-part diagnostic (overall health, most dangerous issue, what to do next) so you can forward it to a client in one click
+- **Per-channel alerting** — email + Slack with per-profile routing, severity-tuned defaults, and notification dedupe
+- **Health scored 0–100** on a weighted formula (error rate 40%, inactive ratio 20%, failure trend 20%, coverage 20%) with persistent snapshots for trend visibility
+- **Multi-tenant workspaces** with role-based access, AES-256-GCM credential encryption, and scheduled audits via Vercel Cron (15-min global sync)
+- **Lifetime Deal (LTD) plan** alongside subscription tiers, plus VAT-aware invoices and Stripe billing portal
+
+## When Runmend ≠ the right tool
+
+If you run **one** Make.com account on **one** zone and check it occasionally, the native Claude.ai connector + a Cowork Live Artifact will probably cover you. Runmend is built for agencies running **clients' production automations** across multiple Make zones or self-hosted n8n, where being told before the client tells you matters.
 
 ## Demo
 

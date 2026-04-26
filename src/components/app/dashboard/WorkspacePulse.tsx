@@ -283,9 +283,9 @@ function EmptyPulse() {
       <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
         Workspace pulse
       </span>
-      <h2 className="mt-2 text-xl font-semibold">Nothing to monitor yet.</h2>
+      <h2 className="mt-2 text-xl font-semibold">No clients connected yet.</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Connect a platform and create your first profile — the pulse will start tracking once a sync completes.
+        Connect a Make.com or n8n account and create a client profile. The pulse fills in after the first audit.
       </p>
     </section>
   );

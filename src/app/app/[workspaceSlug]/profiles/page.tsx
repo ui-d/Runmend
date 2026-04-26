@@ -75,7 +75,7 @@ export default async function ProfilesPage({ params, searchParams }: PageProps) 
             />
           ) : (
             <p className="text-sm text-muted-foreground">
-              No profiles yet. Create one to start monitoring.
+              No client profiles yet. Create one to start auditing.
             </p>
           )}
         </div>
@@ -98,9 +98,9 @@ export default async function ProfilesPage({ params, searchParams }: PageProps) 
           <CardContent className="space-y-4">
             <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground/30" />
             <div>
-              <h3 className="text-lg font-medium">No profiles yet</h3>
+              <h3 className="text-lg font-medium">No client profiles yet</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Create your first automation profile to start monitoring.
+                Each profile is one client backed by one connection. Create your first to begin.
               </p>
             </div>
             <div className="flex justify-center">

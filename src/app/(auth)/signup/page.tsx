@@ -19,7 +19,7 @@ export default function SignupPage() {
       <CardHeader className="text-center">
         <CardTitle className="text-xl">Create your account</CardTitle>
         <CardDescription>
-          Start monitoring your automations for free
+          Start auditing your clients&apos; Make.com and n8n in under a minute
         </CardDescription>
       </CardHeader>
       <CardContent>

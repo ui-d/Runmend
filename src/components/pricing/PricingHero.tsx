@@ -5,12 +5,13 @@ export function PricingHero() {
         Pricing
       </p>
       <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-        Simple pricing that scales with you
+        Pricing for agencies running automations in production
       </h1>
       <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-        Start free with one client profile. Upgrade as your agency grows.
-        All plans include every monitoring check — no features locked behind
-        higher tiers.
+        Free tier to try it on one client. Starter and Pro scale with your
+        client book. All plans run the same six detectors, the same AI
+        diagnostics, and the same multi-zone coverage — capacity is the only
+        thing that changes.
       </p>
     </section>
   );

@@ -173,8 +173,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         No connections yet
       </h2>
       <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-        Connect a Make.com or n8n account to start monitoring scenarios and
-        workflows for silent failures.
+        Connect a client&apos;s Make.com (any of 4 zones) or n8n (cloud or
+        self-hosted) account. Runmend will start auditing on the next sync
+        window.
       </p>
       <Button className="mt-4" onClick={onAdd}>
         <Plus className="mr-1.5 h-4 w-4" />

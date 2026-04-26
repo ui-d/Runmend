@@ -35,11 +35,12 @@ export default function Home() {
             Live demo
           </p>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            See real audit reports
+            Four real audits, four different verdicts
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-            Explore four company profiles with real-world automation issues —
-            from critical failures to minor optimizations.
+            Explore four client-shaped profiles — one critical, two warnings,
+            one healthy. See exactly what Runmend would surface and what
+            Claude would write.
           </p>
         </div>
 

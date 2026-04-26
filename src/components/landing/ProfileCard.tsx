@@ -47,7 +47,7 @@ export function ProfileCard({ profile }: ProfileCardProps) {
               {profile.scenarioCount} automations
             </span>
             <span className="inline-flex items-center gap-1 text-xs font-medium group-hover:gap-2 transition-all">
-              Run audit
+              Open audit
               <ArrowRight className="h-4 w-4" />
             </span>
           </div>

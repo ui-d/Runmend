@@ -62,9 +62,9 @@ const plans: Plan[] = [
   {
     id: "ltd",
     name: "Lifetime",
-    price: "$249",
+    price: "$99",
     priceSuffix: "once",
-    tagline: "Pro, forever. 20 seats total.",
+    tagline: "Pro tier, forever. Limited seats.",
     features: [
       "Pro limits, permanently",
       "One-time payment",
@@ -85,11 +85,12 @@ export function Pricing() {
               Pricing
             </p>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Start free. Upgrade when you add the second client.
+              Pricing scales with your client book, not your features.
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              All plans run the same six detectors and the same Claude-powered
-              diagnostics. Higher tiers just watch more workspaces, more often.
+              Every plan ships the same six detectors, the same AI
+              post-mortems, and the same multi-zone coverage. Higher tiers
+              just monitor more clients, more often.
             </p>
           </div>
         </FadeIn>

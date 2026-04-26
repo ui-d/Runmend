@@ -26,7 +26,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground/50">
-          <p>Runmend — Automation health monitoring for Make.com &amp; n8n</p>
+          <p>Runmend — Production monitoring for Make.com &amp; n8n agencies</p>
           <p>Built with Next.js and Claude</p>
         </div>
       </div>

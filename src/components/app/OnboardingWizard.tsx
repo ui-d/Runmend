@@ -16,19 +16,19 @@ const STEPS = [
   {
     id: "welcome",
     title: "Set up your workspace",
-    description: "Get your automation monitoring running in 3 steps. Monitor all your clients from one dashboard.",
+    description: "Connect a client, create their profile, and Runmend will start auditing on its own. Three steps.",
     icon: Zap,
   },
   {
     id: "connect",
-    title: "Connect your client's platform",
-    description: "Link a Make.com or n8n account. One connection monitors all scenarios in that account.",
+    title: "Connect a client's Make or n8n account",
+    description: "One credential per client. We support all four Make zones (us1, eu1, eu2, us2) and self-hosted n8n.",
     icon: Link2,
   },
   {
     id: "profile",
-    title: "Create a client profile",
-    description: "Each profile represents a client or project you're monitoring. You can add more later.",
+    title: "Create the client profile",
+    description: "Each profile is one client. Pick which connection backs it; you can swap or add more later.",
     icon: BarChart3,
   },
 ];
