@@ -201,6 +201,4 @@ src/
 6. **Vercel Cron:** requires Vercel Pro plan (free tier allows one cron, which is enough for `/api/cron/sync`)
 7. Verify: production URL loads, demo profiles render, Stripe checkout completes in test mode
 
-## License
 
-MIT
