@@ -28,7 +28,7 @@ export function DiagnosticReport() {
             AI diagnostic report
           </p>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Claude writes the post-mortem before you open the tab
+            Runmend writes the post-mortem before you open the tab
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
             After every sync, Runmend feeds execution stats, error patterns,
@@ -153,7 +153,7 @@ export function DiagnosticReport() {
               <Sparkles className="h-3 w-3" />
               Generated from <span className="font-mono text-foreground/80">247 executions</span>
             </span>
-            <span className="hidden sm:inline">Claude Sonnet · 1,040 tokens</span>
+            <span className="hidden sm:inline">Claude Sonnet</span>
           </div>
         </div>
       </FadeIn>
