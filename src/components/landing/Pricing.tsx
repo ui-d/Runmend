@@ -5,7 +5,7 @@ import { Check, Sparkles, Infinity as InfinityIcon } from "lucide-react";
 import { FadeIn } from "./animations/FadeIn";
 
 interface Plan {
-  id: "free" | "starter" | "pro" | "ltd";
+  id: "free" | "starter" | "pro" | "agency" | "ltd";
   name: string;
   price: string;
   priceSuffix?: string;
@@ -60,6 +60,25 @@ const plans: Plan[] = [
     highlight: true,
   },
   {
+    id: "agency",
+    name: "Agency",
+    price: "$149",
+    priceSuffix: "/mo",
+    tagline: "For agencies with 50–100 client automations.",
+    features: [
+      "100 profiles",
+      "96 syncs per day (every 15 min)",
+      "Unlimited AI reports",
+      "Slack + custom alert rules",
+      "Priority support",
+    ],
+    cta: {
+      label: "Contact us",
+      href: "mailto:hello@runmend.com?subject=Runmend%20Agency%20plan",
+      variant: "outline",
+    },
+  },
+  {
     id: "ltd",
     name: "Lifetime",
     price: "$99",
@@ -95,7 +114,7 @@ export function Pricing() {
           </div>
         </FadeIn>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {plans.map((plan, i) => {
             const isLtd = plan.id === "ltd";
             return (

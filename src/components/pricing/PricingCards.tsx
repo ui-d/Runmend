@@ -8,7 +8,7 @@ import { PRICING_PLANS, PLAN_LABELS } from "@/data/pricing";
 export function PricingCards() {
   return (
     <section className="max-w-5xl mx-auto px-4 pb-20">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {PRICING_PLANS.map((plan) => (
           <Card
             key={plan.id}

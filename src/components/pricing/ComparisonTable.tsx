@@ -1,7 +1,7 @@
 import { Check, Minus } from "lucide-react";
 import { COMPARISON_TABLE, PLAN_LABELS, type PlanId } from "@/data/pricing";
 
-const PLAN_ORDER: PlanId[] = ["free", "starter", "pro", "enterprise"];
+const PLAN_ORDER: PlanId[] = ["free", "starter", "pro", "agency", "enterprise"];
 
 function CellValue({ value }: { value: string | number | boolean }) {
   if (typeof value === "boolean") {
@@ -34,13 +34,13 @@ export function ComparisonTable() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/50">
-                <th className="text-left py-3 pr-4 text-sm font-medium text-muted-foreground w-[40%]">
+                <th className="text-left py-3 pr-4 text-sm font-medium text-muted-foreground w-[30%]">
                   Feature
                 </th>
                 {PLAN_ORDER.map((planId) => (
                   <th
                     key={planId}
-                    className="text-center py-3 px-2 text-sm font-medium w-[15%]"
+                    className="text-center py-3 px-2 text-sm font-medium w-[14%]"
                   >
                     {PLAN_LABELS[planId]}
                   </th>
@@ -52,7 +52,7 @@ export function ComparisonTable() {
                 <>
                   <tr key={category.name}>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="pt-8 pb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground"
                     >
                       {category.name}

@@ -28,6 +28,7 @@ export const PLAN_LIMITS = {
   free: { profiles: 1, syncsPerDay: 1, diagnosticsPerMonth: 3 },
   starter: { profiles: 5, syncsPerDay: 4, diagnosticsPerMonth: 20 },
   pro: { profiles: 25, syncsPerDay: 24, diagnosticsPerMonth: -1 },
+  agency: { profiles: 100, syncsPerDay: 96, diagnosticsPerMonth: -1 },
   enterprise: { profiles: -1, syncsPerDay: -1, diagnosticsPerMonth: -1 },
 } as const;
 
@@ -37,12 +38,14 @@ export const PLAN_LABELS: Record<PlanId, string> = {
   free: "Free",
   starter: "Starter",
   pro: "Pro",
+  agency: "Agency",
   enterprise: "Enterprise",
 };
 
 export const PLAN_PRICES: Record<string, { monthly: number }> = {
   starter: { monthly: 19 },
   pro: { monthly: 49 },
+  agency: { monthly: 149 },
 };
 
 /** Stripe Price IDs — set these after creating products in Stripe dashboard */

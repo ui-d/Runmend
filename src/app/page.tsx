@@ -7,7 +7,9 @@ import { DashboardTour } from "@/components/landing/DashboardTour";
 import { PlatformSync } from "@/components/landing/PlatformSync";
 import { Stats } from "@/components/landing/Stats";
 import { HowItWorks } from "@/components/landing/HowItWorks";
+import { Testimonials } from "@/components/landing/Testimonials";
 import { Pricing } from "@/components/landing/Pricing";
+import { Benchmarks } from "@/components/landing/Benchmarks";
 import { ProfileCard } from "@/components/landing/ProfileCard";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
@@ -27,7 +29,9 @@ export default function Home() {
       <PlatformSync />
       <Stats />
       <HowItWorks />
+      <Testimonials />
       <Pricing />
+      <Benchmarks />
 
       <section id="demo" className="max-w-5xl mx-auto px-4 py-20">
         <div className="text-center mb-12">

@@ -58,6 +58,27 @@ export const PRICING_PLANS: PlanCardData[] = [
     ],
   },
   {
+    id: "agency",
+    description:
+      "Agencies running 50–100 client automations across Make and n8n",
+    price: PLAN_PRICES.agency.monthly,
+    highlighted: false,
+    cta: {
+      label: "Contact us",
+      href: "mailto:hello@runmend.com?subject=Runmend%20Agency%20plan",
+    },
+    features: [
+      `${PLAN_LIMITS.agency.profiles} client profiles`,
+      `${PLAN_LIMITS.agency.syncsPerDay} syncs per day (every 15 min)`,
+      "Unlimited AI reports",
+      "All monitoring checks",
+      "Email & Slack alerts",
+      "Custom alert rules",
+      "Priority support",
+      "Dedicated onboarding call",
+    ],
+  },
+  {
     id: "enterprise",
     description: "Multi-team ops with custom volume and sourcing",
     price: null,
@@ -103,6 +124,7 @@ export const COMPARISON_TABLE: ComparisonCategory[] = [
           free: formatLimit(PLAN_LIMITS.free.profiles),
           starter: formatLimit(PLAN_LIMITS.starter.profiles),
           pro: formatLimit(PLAN_LIMITS.pro.profiles),
+          agency: formatLimit(PLAN_LIMITS.agency.profiles),
           enterprise: formatLimit(PLAN_LIMITS.enterprise.profiles),
         },
       },
@@ -112,6 +134,7 @@ export const COMPARISON_TABLE: ComparisonCategory[] = [
           free: formatLimit(PLAN_LIMITS.free.syncsPerDay),
           starter: formatLimit(PLAN_LIMITS.starter.syncsPerDay),
           pro: formatLimit(PLAN_LIMITS.pro.syncsPerDay),
+          agency: formatLimit(PLAN_LIMITS.agency.syncsPerDay),
           enterprise: formatLimit(PLAN_LIMITS.enterprise.syncsPerDay),
         },
       },
@@ -121,6 +144,7 @@ export const COMPARISON_TABLE: ComparisonCategory[] = [
           free: formatLimit(PLAN_LIMITS.free.diagnosticsPerMonth),
           starter: formatLimit(PLAN_LIMITS.starter.diagnosticsPerMonth),
           pro: formatLimit(PLAN_LIMITS.pro.diagnosticsPerMonth),
+          agency: formatLimit(PLAN_LIMITS.agency.diagnosticsPerMonth),
           enterprise: formatLimit(PLAN_LIMITS.enterprise.diagnosticsPerMonth),
         },
       },
@@ -131,23 +155,23 @@ export const COMPARISON_TABLE: ComparisonCategory[] = [
     features: [
       {
         name: "Expiring credentials",
-        values: { free: true, starter: true, pro: true, enterprise: true },
+        values: { free: true, starter: true, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Broken webhooks",
-        values: { free: true, starter: true, pro: true, enterprise: true },
+        values: { free: true, starter: true, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Empty field mappings",
-        values: { free: true, starter: true, pro: true, enterprise: true },
+        values: { free: true, starter: true, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Rate limit warnings",
-        values: { free: true, starter: true, pro: true, enterprise: true },
+        values: { free: true, starter: true, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Zombie automation detection",
-        values: { free: true, starter: true, pro: true, enterprise: true },
+        values: { free: true, starter: true, pro: true, agency: true, enterprise: true },
       },
     ],
   },
@@ -156,19 +180,19 @@ export const COMPARISON_TABLE: ComparisonCategory[] = [
     features: [
       {
         name: "Email alerts",
-        values: { free: false, starter: true, pro: true, enterprise: true },
+        values: { free: false, starter: true, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Slack notifications",
-        values: { free: false, starter: false, pro: true, enterprise: true },
+        values: { free: false, starter: false, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Custom alert rules",
-        values: { free: false, starter: false, pro: true, enterprise: true },
+        values: { free: false, starter: false, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Exportable reports",
-        values: { free: false, starter: false, pro: true, enterprise: true },
+        values: { free: false, starter: false, pro: true, agency: true, enterprise: true },
       },
     ],
   },
@@ -177,23 +201,23 @@ export const COMPARISON_TABLE: ComparisonCategory[] = [
     features: [
       {
         name: "Community support",
-        values: { free: true, starter: true, pro: true, enterprise: true },
+        values: { free: true, starter: true, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Email support",
-        values: { free: false, starter: true, pro: true, enterprise: true },
+        values: { free: false, starter: true, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Priority support",
-        values: { free: false, starter: false, pro: true, enterprise: true },
+        values: { free: false, starter: false, pro: true, agency: true, enterprise: true },
       },
       {
         name: "Dedicated account manager",
-        values: { free: false, starter: false, pro: false, enterprise: true },
+        values: { free: false, starter: false, pro: false, agency: false, enterprise: true },
       },
       {
         name: "Custom onboarding",
-        values: { free: false, starter: false, pro: false, enterprise: true },
+        values: { free: false, starter: false, pro: false, agency: false, enterprise: true },
       },
     ],
   },
