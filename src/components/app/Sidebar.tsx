@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Link2, Settings, BarChart3, CreditCard } from "lucide-react";
+import { LayoutDashboard, Link2, Settings, BarChart3, CreditCard, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlanUsageBadge } from "./PlanUsageBadge";
 
@@ -17,6 +17,7 @@ const navItems = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
   { label: "Profiles", href: "/profiles", icon: BarChart3 },
   { label: "Connections", href: "/connections", icon: Link2 },
+  { label: "Pre-flight", href: "/scenarios", icon: ShieldCheck },
   { label: "Billing", href: "/billing", icon: CreditCard },
   { label: "Settings", href: "/settings", icon: Settings },
 ];

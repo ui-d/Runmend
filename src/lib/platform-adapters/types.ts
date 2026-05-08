@@ -21,8 +21,26 @@ export interface ConnectionTestResult {
   metadata?: Record<string, unknown>;
 }
 
+export interface WorkflowExecutionResult {
+  ok: boolean;
+  /** JSON-serializable output from the workflow run, or null if unavailable. */
+  output: unknown;
+  /** Wall-clock duration of the workflow run, including any polling. */
+  latencyMs: number;
+  error?: string;
+}
+
 export interface PlatformAdapter {
   testConnection(): Promise<ConnectionTestResult>;
   fetchAutomations(): Promise<NormalizedAutomation[]>;
   fetchExecutionLogs(since: Date): Promise<NormalizedExecution[]>;
+  /**
+   * Trigger a workflow with the given input and wait for completion.
+   * Implementations should respect a sensible internal timeout and return
+   * `ok: false` rather than throwing when the run cannot be observed.
+   */
+  executeWorkflow(
+    workflowExternalId: string,
+    input: unknown,
+  ): Promise<WorkflowExecutionResult>;
 }

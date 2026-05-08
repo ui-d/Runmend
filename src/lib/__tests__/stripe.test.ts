@@ -31,6 +31,40 @@ describe("checkPlanLimit", () => {
       limit: PLAN_LIMITS.free.profiles,
     });
   });
+
+  it("gates preflight scenarios per tier", () => {
+    expect(checkPlanLimit("free", "preflightScenarios", 0)).toEqual({
+      allowed: false,
+      limit: 0,
+    });
+    expect(checkPlanLimit("pro", "preflightScenarios", 4)).toEqual({
+      allowed: true,
+      limit: 5,
+    });
+    expect(checkPlanLimit("pro", "preflightScenarios", 5)).toEqual({
+      allowed: false,
+      limit: 5,
+    });
+    expect(checkPlanLimit("agency", "preflightScenarios", 49)).toEqual({
+      allowed: true,
+      limit: 50,
+    });
+    expect(checkPlanLimit("enterprise", "preflightScenarios", 9_999)).toEqual({
+      allowed: true,
+      limit: -1,
+    });
+  });
+
+  it("gates monthly preflight runs per tier", () => {
+    expect(checkPlanLimit("pro", "preflightRunsPerMonth", 49)).toEqual({
+      allowed: true,
+      limit: 50,
+    });
+    expect(checkPlanLimit("agency", "preflightRunsPerMonth", 500)).toEqual({
+      allowed: false,
+      limit: 500,
+    });
+  });
 });
 
 describe("PLAN metadata", () => {

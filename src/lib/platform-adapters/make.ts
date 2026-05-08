@@ -3,8 +3,12 @@ import type {
   ConnectionTestResult,
   NormalizedAutomation,
   NormalizedExecution,
+  WorkflowExecutionResult,
 } from "./types";
 import { fetchWithRetry } from "./retry";
+
+const WORKFLOW_POLL_TIMEOUT_MS = 60_000;
+const WORKFLOW_POLL_INTERVAL_MS = 2_000;
 
 export class MakeAdapter implements PlatformAdapter {
   private baseUrl: string;
@@ -114,6 +118,18 @@ export class MakeAdapter implements PlatformAdapter {
     return allScenarios;
   }
 
+  async executeWorkflow(
+    workflowExternalId: string,
+    input: unknown,
+  ): Promise<WorkflowExecutionResult> {
+    const teamId = await this.resolveTeamId();
+    return executeMakeWorkflow(
+      { baseUrl: this.baseUrl, headers: this.headers, teamId },
+      workflowExternalId,
+      input,
+    );
+  }
+
   async fetchExecutionLogs(since: Date): Promise<NormalizedExecution[]> {
     const executions: NormalizedExecution[] = [];
     const automations = await this.fetchAutomations();
@@ -165,4 +181,80 @@ function mapMakeStatus(status: unknown): string {
   if (s === "error" || s === "0") return "error";
   if (s === "warning" || s === "2") return "warning";
   return "unknown";
+}
+
+/**
+ * Trigger a Make scenario via /scenarios/{id}/run, then poll the most
+ * recent log entry for completion. Returns the parsed log payload as the
+ * "output" because Make does not expose direct module results in its
+ * public v2 API. Pre-flight assertions are written against that envelope.
+ */
+async function executeMakeWorkflow(
+  ctx: { baseUrl: string; headers: Record<string, string>; teamId: number | null },
+  scenarioId: string,
+  input: unknown,
+): Promise<WorkflowExecutionResult> {
+  const startedAt = Date.now();
+  try {
+    const teamParam = ctx.teamId ? `?teamId=${ctx.teamId}` : "";
+    const triggerRes = await fetchWithRetry(
+      `${ctx.baseUrl}/scenarios/${scenarioId}/run${teamParam}`,
+      {
+        method: "POST",
+        headers: ctx.headers,
+        body: JSON.stringify({ data: input ?? {} }),
+      },
+    );
+    if (!triggerRes.ok) {
+      return {
+        ok: false,
+        output: null,
+        latencyMs: Date.now() - startedAt,
+        error: `Make trigger failed: ${triggerRes.status}`,
+      };
+    }
+    const triggerData = (await triggerRes.json()) as Record<string, unknown>;
+    const executionId =
+      (triggerData.executionId as string | undefined) ??
+      (triggerData.execution_id as string | undefined);
+
+    while (Date.now() - startedAt < WORKFLOW_POLL_TIMEOUT_MS) {
+      await new Promise((r) => setTimeout(r, WORKFLOW_POLL_INTERVAL_MS));
+      const logsRes = await fetchWithRetry(
+        `${ctx.baseUrl}/scenarios/${scenarioId}/logs?pg[limit]=5${teamParam ? `&teamId=${ctx.teamId}` : ""}`,
+        { headers: ctx.headers },
+      );
+      if (!logsRes.ok) continue;
+      const logsData = (await logsRes.json()) as Record<string, unknown>;
+      const logs = (logsData.scenarioLogs ?? logsData ?? []) as Array<
+        Record<string, unknown>
+      >;
+      if (!Array.isArray(logs) || logs.length === 0) continue;
+      const match = executionId
+        ? logs.find((log) => String(log.id ?? log.executionId) === executionId)
+        : logs[0];
+      if (!match) continue;
+      const status = mapMakeStatus(match.status);
+      if (status === "unknown") continue;
+      return {
+        ok: status === "success",
+        output: match,
+        latencyMs: Date.now() - startedAt,
+        error: status === "success" ? undefined : (match.error as string | undefined) ?? "Workflow failed",
+      };
+    }
+    return {
+      ok: false,
+      output: null,
+      latencyMs: Date.now() - startedAt,
+      error: "Timed out waiting for Make scenario to complete",
+    };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      output: null,
+      latencyMs: Date.now() - startedAt,
+      error: err instanceof Error ? err.message : "Workflow execution failed",
+    };
+  }
 }

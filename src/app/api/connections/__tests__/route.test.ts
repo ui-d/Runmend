@@ -25,6 +25,7 @@ const fakeAdapter: PlatformAdapter = {
   testConnection: vi.fn(async () => ({ ok: true, metadata: { teamId: 42 } })),
   fetchAutomations: vi.fn(async () => []),
   fetchExecutionLogs: vi.fn(async () => []),
+  executeWorkflow: vi.fn(async () => ({ ok: true, output: null, latencyMs: 0 })),
 };
 
 vi.mock("@/lib/platform-adapters", () => ({

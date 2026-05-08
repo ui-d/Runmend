@@ -205,3 +205,101 @@ export function hoursAgo(hours: number): string {
 export function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
+
+export const TEST_SCENARIO_ID = "00000000-0000-4000-8000-000000000050";
+export const TEST_RUN_ID = "00000000-0000-4000-8000-000000000060";
+export const TEST_INPUT_ID = "00000000-0000-4000-8000-000000000070";
+
+export function makeScenario(
+  overrides: Partial<Tables["preflight_scenarios"]["Row"]> = {},
+): Tables["preflight_scenarios"]["Row"] {
+  return {
+    id: overrides.id ?? TEST_SCENARIO_ID,
+    workspace_id: overrides.workspace_id ?? TEST_UUID,
+    connection_id: overrides.connection_id ?? TEST_CONNECTION_ID,
+    automation_profile_id: overrides.automation_profile_id ?? null,
+    name: overrides.name ?? "Test Scenario",
+    description: overrides.description ?? null,
+    workflow_external_id: overrides.workflow_external_id ?? "wf-1",
+    workflow_name: overrides.workflow_name ?? null,
+    schedule_cron: overrides.schedule_cron ?? null,
+    baseline_run_id: overrides.baseline_run_id ?? null,
+    cost_cap_cents: overrides.cost_cap_cents ?? 500,
+    enabled: overrides.enabled ?? true,
+    archived_at: overrides.archived_at ?? null,
+    created_by: overrides.created_by ?? null,
+    created_at: overrides.created_at ?? isoNow(),
+    updated_at: overrides.updated_at ?? isoNow(),
+  };
+}
+
+export function makePreflightInput(
+  overrides: Partial<Tables["preflight_inputs"]["Row"]> = {},
+): Tables["preflight_inputs"]["Row"] {
+  return {
+    id: overrides.id ?? TEST_INPUT_ID,
+    workspace_id: overrides.workspace_id ?? TEST_UUID,
+    scenario_id: overrides.scenario_id ?? TEST_SCENARIO_ID,
+    input_data: overrides.input_data ?? { example: "value" },
+    label: overrides.label ?? null,
+    source: overrides.source ?? "manual",
+    pii_redacted_at: overrides.pii_redacted_at ?? null,
+    created_at: overrides.created_at ?? isoNow(),
+  };
+}
+
+export function makeAssertion(
+  overrides: Partial<Tables["preflight_assertions"]["Row"]> = {},
+): Tables["preflight_assertions"]["Row"] {
+  return {
+    id: overrides.id ?? "assert-1",
+    workspace_id: overrides.workspace_id ?? TEST_UUID,
+    scenario_id: overrides.scenario_id ?? TEST_SCENARIO_ID,
+    assertion_type: overrides.assertion_type ?? "field_present",
+    config: overrides.config ?? { field: "result" },
+    severity: overrides.severity ?? "fail",
+    created_at: overrides.created_at ?? isoNow(),
+  };
+}
+
+export function makeRun(
+  overrides: Partial<Tables["preflight_runs"]["Row"]> = {},
+): Tables["preflight_runs"]["Row"] {
+  return {
+    id: overrides.id ?? TEST_RUN_ID,
+    workspace_id: overrides.workspace_id ?? TEST_UUID,
+    scenario_id: overrides.scenario_id ?? TEST_SCENARIO_ID,
+    triggered_by: overrides.triggered_by ?? "manual",
+    triggered_by_user: overrides.triggered_by_user ?? null,
+    status: overrides.status ?? "passed",
+    total_inputs: overrides.total_inputs ?? 0,
+    passed_count: overrides.passed_count ?? 0,
+    failed_count: overrides.failed_count ?? 0,
+    errored_count: overrides.errored_count ?? 0,
+    pass_rate: overrides.pass_rate ?? null,
+    total_cost_cents: overrides.total_cost_cents ?? 0,
+    total_latency_ms: overrides.total_latency_ms ?? 0,
+    baseline_drift_pct: overrides.baseline_drift_pct ?? null,
+    drift_eligible: overrides.drift_eligible ?? false,
+    started_at: overrides.started_at ?? isoNow(),
+    completed_at: overrides.completed_at ?? null,
+  };
+}
+
+export function makeRunResult(
+  overrides: Partial<Tables["preflight_run_results"]["Row"]> = {},
+): Tables["preflight_run_results"]["Row"] {
+  return {
+    id: overrides.id ?? crypto.randomUUID(),
+    workspace_id: overrides.workspace_id ?? TEST_UUID,
+    run_id: overrides.run_id ?? TEST_RUN_ID,
+    input_id: overrides.input_id ?? TEST_INPUT_ID,
+    output_data: overrides.output_data ?? { result: "ok" },
+    passed: overrides.passed ?? true,
+    assertion_results: overrides.assertion_results ?? [],
+    latency_ms: overrides.latency_ms ?? 100,
+    cost_cents: overrides.cost_cents ?? 0,
+    error_message: overrides.error_message ?? null,
+    created_at: overrides.created_at ?? isoNow(),
+  };
+}

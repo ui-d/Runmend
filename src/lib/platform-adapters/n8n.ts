@@ -2,6 +2,7 @@ import type {
   PlatformAdapter,
   NormalizedAutomation,
   NormalizedExecution,
+  WorkflowExecutionResult,
 } from "./types";
 import { fetchWithRetry } from "./retry";
 
@@ -57,6 +58,47 @@ export class N8nAdapter implements PlatformAdapter {
         lastRunAt: w.updatedAt ? String(w.updatedAt) : null,
       })
     );
+  }
+
+  async executeWorkflow(
+    workflowExternalId: string,
+    input: unknown,
+  ): Promise<WorkflowExecutionResult> {
+    const startedAt = Date.now();
+    try {
+      const res = await fetchWithRetry(
+        `${this.instanceUrl}/api/v1/workflows/${workflowExternalId}/execute`,
+        {
+          method: "POST",
+          headers: this.headers,
+          body: JSON.stringify({ workflowData: input ?? {} }),
+        },
+      );
+      if (!res.ok) {
+        return {
+          ok: false,
+          output: null,
+          latencyMs: Date.now() - startedAt,
+          error: `n8n execute failed: ${res.status}`,
+        };
+      }
+      const data = (await res.json()) as Record<string, unknown>;
+      const status = String(data.status ?? data.finished ?? "").toLowerCase();
+      const isSuccess = status === "success" || status === "true" || data.finished === true;
+      return {
+        ok: isSuccess,
+        output: data,
+        latencyMs: Date.now() - startedAt,
+        error: isSuccess ? undefined : (data.error as string | undefined) ?? "Workflow failed",
+      };
+    } catch (err: unknown) {
+      return {
+        ok: false,
+        output: null,
+        latencyMs: Date.now() - startedAt,
+        error: err instanceof Error ? err.message : "Workflow execution failed",
+      };
+    }
   }
 
   async fetchExecutionLogs(since: Date): Promise<NormalizedExecution[]> {

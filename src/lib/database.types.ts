@@ -395,6 +395,33 @@ export type Database = {
           },
         ]
       }
+      failed_refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_email: string | null
+          error_message: string
+          id: string
+          session_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_email?: string | null
+          error_message: string
+          id?: string
+          session_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_email?: string | null
+          error_message?: string
+          id?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
       ltd_allocations: {
         Row: {
           id: number
@@ -597,6 +624,324 @@ export type Database = {
           },
         ]
       }
+      preflight_assertions: {
+        Row: {
+          assertion_type: string
+          config: Json
+          created_at: string
+          id: string
+          scenario_id: string
+          severity: string
+          workspace_id: string
+        }
+        Insert: {
+          assertion_type: string
+          config: Json
+          created_at?: string
+          id?: string
+          scenario_id: string
+          severity?: string
+          workspace_id: string
+        }
+        Update: {
+          assertion_type?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          scenario_id?: string
+          severity?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preflight_assertions_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "preflight_scenarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preflight_assertions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preflight_inputs: {
+        Row: {
+          created_at: string
+          id: string
+          input_data: Json
+          label: string | null
+          pii_redacted_at: string | null
+          scenario_id: string
+          source: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input_data: Json
+          label?: string | null
+          pii_redacted_at?: string | null
+          scenario_id: string
+          source?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input_data?: Json
+          label?: string | null
+          pii_redacted_at?: string | null
+          scenario_id?: string
+          source?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preflight_inputs_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "preflight_scenarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preflight_inputs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preflight_run_results: {
+        Row: {
+          assertion_results: Json
+          cost_cents: number | null
+          created_at: string
+          error_message: string | null
+          id: string
+          input_id: string
+          latency_ms: number | null
+          output_data: Json | null
+          passed: boolean
+          run_id: string
+          workspace_id: string
+        }
+        Insert: {
+          assertion_results: Json
+          cost_cents?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_id: string
+          latency_ms?: number | null
+          output_data?: Json | null
+          passed: boolean
+          run_id: string
+          workspace_id: string
+        }
+        Update: {
+          assertion_results?: Json
+          cost_cents?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_id?: string
+          latency_ms?: number | null
+          output_data?: Json | null
+          passed?: boolean
+          run_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preflight_run_results_input_id_fkey"
+            columns: ["input_id"]
+            isOneToOne: false
+            referencedRelation: "preflight_inputs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preflight_run_results_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "preflight_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preflight_run_results_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preflight_runs: {
+        Row: {
+          baseline_drift_pct: number | null
+          completed_at: string | null
+          drift_eligible: boolean
+          errored_count: number
+          failed_count: number
+          id: string
+          pass_rate: number | null
+          passed_count: number
+          scenario_id: string
+          started_at: string
+          status: string
+          total_cost_cents: number
+          total_inputs: number
+          total_latency_ms: number
+          triggered_by: string
+          triggered_by_user: string | null
+          workspace_id: string
+        }
+        Insert: {
+          baseline_drift_pct?: number | null
+          completed_at?: string | null
+          drift_eligible?: boolean
+          errored_count?: number
+          failed_count?: number
+          id?: string
+          pass_rate?: number | null
+          passed_count?: number
+          scenario_id: string
+          started_at?: string
+          status?: string
+          total_cost_cents?: number
+          total_inputs?: number
+          total_latency_ms?: number
+          triggered_by: string
+          triggered_by_user?: string | null
+          workspace_id: string
+        }
+        Update: {
+          baseline_drift_pct?: number | null
+          completed_at?: string | null
+          drift_eligible?: boolean
+          errored_count?: number
+          failed_count?: number
+          id?: string
+          pass_rate?: number | null
+          passed_count?: number
+          scenario_id?: string
+          started_at?: string
+          status?: string
+          total_cost_cents?: number
+          total_inputs?: number
+          total_latency_ms?: number
+          triggered_by?: string
+          triggered_by_user?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preflight_runs_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "preflight_scenarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preflight_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preflight_scenarios: {
+        Row: {
+          archived_at: string | null
+          automation_profile_id: string | null
+          baseline_run_id: string | null
+          connection_id: string
+          cost_cap_cents: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          enabled: boolean
+          id: string
+          name: string
+          schedule_cron: string | null
+          updated_at: string
+          workflow_external_id: string
+          workflow_name: string | null
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          automation_profile_id?: string | null
+          baseline_run_id?: string | null
+          connection_id: string
+          cost_cap_cents?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          name: string
+          schedule_cron?: string | null
+          updated_at?: string
+          workflow_external_id: string
+          workflow_name?: string | null
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          automation_profile_id?: string | null
+          baseline_run_id?: string | null
+          connection_id?: string
+          cost_cap_cents?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          name?: string
+          schedule_cron?: string | null
+          updated_at?: string
+          workflow_external_id?: string
+          workflow_name?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preflight_scenarios_automation_profile_id_fkey"
+            columns: ["automation_profile_id"]
+            isOneToOne: false
+            referencedRelation: "automation_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preflight_scenarios_baseline_run_fk"
+            columns: ["baseline_run_id"]
+            isOneToOne: false
+            referencedRelation: "preflight_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preflight_scenarios_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "platform_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preflight_scenarios_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_health_snapshots: {
         Row: {
           automation_count: number
@@ -634,33 +979,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      failed_refunds: {
-        Row: {
-          amount: number
-          created_at: string
-          customer_email: string | null
-          error_message: string
-          id: string
-          session_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          customer_email?: string | null
-          error_message: string
-          id?: string
-          session_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          customer_email?: string | null
-          error_message?: string
-          id?: string
-          session_id?: string
-        }
-        Relationships: []
       }
       stripe_webhook_events: {
         Row: {

@@ -25,14 +25,50 @@ export const stripe = {
 } as unknown as Stripe;
 
 export const PLAN_LIMITS = {
-  free: { profiles: 1, syncsPerDay: 1, diagnosticsPerMonth: 3 },
-  starter: { profiles: 5, syncsPerDay: 4, diagnosticsPerMonth: 20 },
-  pro: { profiles: 25, syncsPerDay: 24, diagnosticsPerMonth: -1 },
-  agency: { profiles: 100, syncsPerDay: 96, diagnosticsPerMonth: -1 },
-  enterprise: { profiles: -1, syncsPerDay: -1, diagnosticsPerMonth: -1 },
+  free: {
+    profiles: 1,
+    syncsPerDay: 1,
+    diagnosticsPerMonth: 3,
+    preflightScenarios: 0,
+    preflightRunsPerMonth: 0,
+  },
+  starter: {
+    profiles: 5,
+    syncsPerDay: 4,
+    diagnosticsPerMonth: 20,
+    preflightScenarios: 0,
+    preflightRunsPerMonth: 0,
+  },
+  pro: {
+    profiles: 25,
+    syncsPerDay: 24,
+    diagnosticsPerMonth: -1,
+    preflightScenarios: 5,
+    preflightRunsPerMonth: 50,
+  },
+  agency: {
+    profiles: 100,
+    syncsPerDay: 96,
+    diagnosticsPerMonth: -1,
+    preflightScenarios: 50,
+    preflightRunsPerMonth: 500,
+  },
+  enterprise: {
+    profiles: -1,
+    syncsPerDay: -1,
+    diagnosticsPerMonth: -1,
+    preflightScenarios: -1,
+    preflightRunsPerMonth: -1,
+  },
 } as const;
 
 export type PlanId = keyof typeof PLAN_LIMITS;
+export type PlanResource =
+  | "profiles"
+  | "syncsPerDay"
+  | "diagnosticsPerMonth"
+  | "preflightScenarios"
+  | "preflightRunsPerMonth";
 
 export const PLAN_LABELS: Record<PlanId, string> = {
   free: "Free",
@@ -70,7 +106,7 @@ export function resolveEffectivePlan(
 
 export function checkPlanLimit(
   plan: string,
-  resource: "profiles" | "syncsPerDay" | "diagnosticsPerMonth",
+  resource: PlanResource,
   currentCount: number
 ): { allowed: boolean; limit: number } {
   const limits = PLAN_LIMITS[plan as PlanId] ?? PLAN_LIMITS.free;
