@@ -162,7 +162,7 @@ export function LiveMonitor() {
   const worst = clients.reduce((m, c) => Math.min(m, c.health), 100);
 
   return (
-    <section className="max-w-5xl mx-auto px-4 pb-24">
+    <section className="max-w-6xl mx-auto px-4 pb-24">
       <FadeIn>
         <div className="relative rounded-xl border border-border/60 bg-background shadow-2xl shadow-black/40 overflow-hidden">
           {/* Glow */}

@@ -38,7 +38,7 @@ const previews: BenchmarkPreview[] = [
 export function Benchmarks() {
   return (
     <section id="benchmarks" className="bg-muted/10">
-      <div className="max-w-5xl mx-auto px-4 py-20">
+      <div className="max-w-6xl mx-auto px-4 py-20">
         <FadeIn>
           <div className="text-center mb-10">
             <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-4">

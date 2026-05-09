@@ -32,7 +32,7 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="max-w-5xl mx-auto px-4 py-20">
+    <section id="how-it-works" className="max-w-6xl mx-auto px-4 py-20">
       <FadeIn>
         <div className="text-center mb-12">
           <p className="text-sm font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">

@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 export function CTA() {
   return (
-    <section className="max-w-5xl mx-auto px-4 py-20">
+    <section className="max-w-6xl mx-auto px-4 py-20">
       <div className="text-center rounded-2xl border border-border/50 bg-muted/30 px-6 py-20">
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Stop firefighting. Start monitoring.

@@ -32,7 +32,7 @@ const stats = [
 export function Stats() {
   return (
     <section className="border-y border-border/50 bg-muted/30">
-      <div className="max-w-5xl mx-auto px-4 py-16">
+      <div className="max-w-6xl mx-auto px-4 py-16">
         <FadeIn>
           <p className="text-center text-sm font-medium text-muted-foreground/70 uppercase tracking-wider mb-10">
             Built to catch what Make and n8n don&apos;t surface

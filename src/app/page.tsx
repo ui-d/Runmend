@@ -33,7 +33,7 @@ export default function Home() {
       <Pricing />
       <Benchmarks />
 
-      <section id="demo" className="max-w-5xl mx-auto px-4 py-20">
+      <section id="demo" className="max-w-6xl mx-auto px-4 py-20">
         <div className="text-center mb-12">
           <p className="text-sm font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">
             Live demo

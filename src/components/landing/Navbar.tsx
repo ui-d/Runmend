@@ -41,7 +41,7 @@ export async function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
-      <div className="max-w-5xl mx-auto flex items-center justify-between px-4 h-14">
+      <div className="max-w-6xl mx-auto flex items-center justify-between px-4 h-14">
         <Link href="/" className="text-lg font-bold tracking-tight">
           run<span className="text-muted-foreground">mend</span>
         </Link>

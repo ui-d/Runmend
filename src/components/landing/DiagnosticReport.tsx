@@ -21,7 +21,7 @@ export function DiagnosticReport() {
   const [step, setStep] = useState(0);
 
   return (
-    <section className="max-w-5xl mx-auto px-4 py-24">
+    <section className="max-w-6xl mx-auto px-4 py-24">
       <FadeIn>
         <div className="text-center mb-10">
           <p className="text-sm font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">

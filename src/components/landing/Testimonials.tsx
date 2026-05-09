@@ -32,7 +32,7 @@ export function Testimonials() {
       id="testimonials"
       className="border-y border-border/50 bg-muted/30"
     >
-      <div className="max-w-5xl mx-auto px-4 py-20">
+      <div className="max-w-6xl mx-auto px-4 py-20">
         <FadeIn>
           <div className="text-center mb-10">
             <p className="text-sm font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">

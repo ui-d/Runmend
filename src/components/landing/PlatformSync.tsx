@@ -5,7 +5,7 @@ import { FadeIn } from "./animations/FadeIn";
 
 export function PlatformSync() {
   return (
-    <section className="max-w-5xl mx-auto px-4 py-20">
+    <section className="max-w-6xl mx-auto px-4 py-20">
       <FadeIn>
         <div className="relative mx-auto max-w-3xl rounded-2xl border border-border/50 bg-muted/10 px-6 py-10 overflow-hidden">
           <div
