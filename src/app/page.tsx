@@ -2,6 +2,7 @@ import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { LiveMonitor } from "@/components/landing/LiveMonitor";
 import { Detectors } from "@/components/landing/Detectors";
+import { PreflightCheck } from "@/components/landing/PreflightCheck";
 import { DiagnosticReport } from "@/components/landing/DiagnosticReport";
 import { DashboardTour } from "@/components/landing/DashboardTour";
 import { PlatformSync } from "@/components/landing/PlatformSync";
@@ -24,6 +25,7 @@ export default function Home() {
       <Hero />
       <LiveMonitor />
       <Detectors />
+      <PreflightCheck />
       <DiagnosticReport />
       <DashboardTour />
       <PlatformSync />

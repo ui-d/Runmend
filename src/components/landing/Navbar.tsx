@@ -50,6 +50,9 @@ export async function Navbar() {
           <Link href="/#detectors" className="hover:text-foreground transition-colors">
             Detectors
           </Link>
+          <Link href="/#preflight" className="hover:text-foreground transition-colors">
+            Pre-flight
+          </Link>
           <Link href="/#how-it-works" className="hover:text-foreground transition-colors">
             How it works
           </Link>

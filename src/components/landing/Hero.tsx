@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Radar, ShieldCheck } from "lucide-react";
 
 export function Hero() {
   return (
@@ -104,6 +104,35 @@ export function Hero() {
         <Sparkles className="h-3 w-3" />
         Free forever on 1 profile · Claude Sonnet diagnostics included
       </p>
+
+      <div className="mt-12 grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
+        <a
+          href="#detectors"
+          className="group rounded-xl border border-border/50 bg-muted/40 p-4 text-left transition-colors hover:border-border hover:bg-muted/60"
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Radar className="h-4 w-4 text-red-400" />
+            Detect what broke
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            Six always-on detectors plus a Claude post-mortem after every
+            15-minute sync.
+          </p>
+        </a>
+        <a
+          href="#preflight"
+          className="group rounded-xl border border-border/50 bg-muted/40 p-4 text-left transition-colors hover:border-border hover:bg-muted/60"
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            Prevent what&apos;s about to
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            Pre-flight Check replays real inputs and asserts output quality,
+            latency &amp; cost before you ship a change.
+          </p>
+        </a>
+      </div>
     </section>
   );
 }

@@ -55,6 +55,7 @@ const plans: Plan[] = [
       "24 syncs per day (every hour)",
       "Unlimited AI reports",
       "Per-profile alert routing",
+      "Pre-flight Check · 5 scenarios, 50 runs/mo",
     ],
     cta: { label: "Choose Pro", href: "/signup", variant: "primary" },
     highlight: true,
@@ -70,6 +71,7 @@ const plans: Plan[] = [
       "96 syncs per day (every 15 min)",
       "Unlimited AI reports",
       "Slack + custom alert rules",
+      "Pre-flight Check · 50 scenarios, 500 runs/mo",
       "Priority support",
     ],
     cta: {
@@ -86,6 +88,7 @@ const plans: Plan[] = [
     tagline: "Pro tier, forever. Limited seats.",
     features: [
       "Pro limits, permanently",
+      "Pre-flight Check · Pro limits",
       "One-time payment",
       "VAT-ready invoices",
       "Grandfathered into future features",
@@ -104,12 +107,12 @@ export function Pricing() {
               Pricing
             </p>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Pricing scales with your client book, not your features.
+              Start free. Scale as your client book grows.
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Every plan ships the same six detectors, the same AI
-              post-mortems, and the same multi-zone coverage. Higher tiers
-              just monitor more clients, more often.
+              Every plan runs all six detectors, AI post-mortems, and
+              multi-zone coverage. Pro and up add Pre-flight Check and richer
+              alerting — higher tiers just monitor more clients, more often.
             </p>
           </div>
         </FadeIn>

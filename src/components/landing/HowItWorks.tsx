@@ -1,6 +1,6 @@
 "use client";
 
-import { Plug, ScanLine, Sparkles } from "lucide-react";
+import { Plug, ScanLine, Sparkles, ShieldCheck } from "lucide-react";
 import { FadeIn } from "./animations/FadeIn";
 
 const steps = [
@@ -28,6 +28,14 @@ const steps = [
     description:
       "Claude reads the execution stats, open issues and error patterns and writes a three-part diagnostic: overall health, the most dangerous issue, and what to do next.",
   },
+  {
+    icon: ShieldCheck,
+    step: "04",
+    title: "Prevent",
+    time: "on demand, before you ship",
+    description:
+      "Before a change goes live, Pre-flight Check replays real inputs through the workflow and asserts schema, fields, latency, token cost, and Claude-judged quality. Drift against a baseline is flagged automatically.",
+  },
 ];
 
 export function HowItWorks() {
@@ -39,12 +47,12 @@ export function HowItWorks() {
             How it works
           </p>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Three steps from blind to briefed
+            From blind to briefed — and bad changes caught before they ship
           </h2>
         </div>
       </FadeIn>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 relative">
         <div
           aria-hidden="true"
           className="hidden md:block absolute left-0 right-0 top-8 h-px"
