@@ -11,9 +11,26 @@ import {
   type AssertionInput,
   type InputDraft,
 } from "@/lib/queries/preflight";
+import { getConnectionById } from "@/lib/queries/connections";
 import { scenarioCreateSchema } from "@/lib/validation/preflight-schemas";
 import { formatZodErrors } from "@/lib/validation/schemas";
 import type { Json } from "@/lib/database.types";
+
+interface ScenarioWarning {
+  code: string;
+  message: string;
+  docHref: string;
+}
+
+const MAKE_COST_WARNING: ScenarioWarning = {
+  code: "cost_unsupported_make",
+  message:
+    "cost_under_cents is not yet supported for Make connections — Make's " +
+    "public v2 API does not expose per-module cost. The assertion is saved " +
+    "and will activate automatically when Make cost monitoring ships; until " +
+    "then it records as a non-failing warning, not a failure.",
+  docHref: "/docs/MAKE_COST_EXTRACTION_GAP.md",
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -120,7 +137,22 @@ export async function POST(request: NextRequest) {
       assertions,
     });
 
-    return NextResponse.json({ scenario }, { status: 201 });
+    // Non-blocking signpost: cost_under_cents on a Make connection is a known
+    // product gap (see docs/MAKE_COST_EXTRACTION_GAP.md). We still create the
+    // scenario so the assertion auto-activates when Make cost ships, and the
+    // attempt is an adoption signal.
+    const warnings: ScenarioWarning[] = [];
+    if (assertions.some((a) => a.assertion_type === "cost_under_cents")) {
+      const connection = await getConnectionById(admin, input.connectionId);
+      if (connection?.platform === "make") {
+        warnings.push(MAKE_COST_WARNING);
+      }
+    }
+
+    return NextResponse.json(
+      { scenario, ...(warnings.length > 0 ? { warnings } : {}) },
+      { status: 201 },
+    );
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Failed to create scenario";
