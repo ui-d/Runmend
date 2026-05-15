@@ -39,9 +39,14 @@ export type AssertionConfig =
   | { type: "field_present"; field: string }
   | { type: "field_matches"; field: string; pattern?: string; equals?: Json }
   | { type: "field_in_set"; field: string; values: ReadonlyArray<Json> }
-  | { type: "llm_judge"; rubric: string; model?: string }
-  | { type: "latency_under_ms"; threshold_ms: number }
-  | { type: "cost_under_cents"; threshold_cents: number };
+  | {
+      type: "llm_judge";
+      criterion: string;
+      min_score?: number;
+      baseline_run_id?: string;
+    }
+  | { type: "latency_under_ms"; max_ms: number }
+  | { type: "cost_under_cents"; max_cents: number; scope?: "total" | "llm_only" };
 
 export interface SingleAssertionOutcome {
   assertion_id: string;

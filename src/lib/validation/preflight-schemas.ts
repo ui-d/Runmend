@@ -45,6 +45,22 @@ export const costUnderCentsConfigSchema = z.object({
 });
 export type CostUnderCentsConfigInput = z.infer<typeof costUnderCentsConfigSchema>;
 
+export const llmJudgeConfigSchema = z.object({
+  criterion: z
+    .string()
+    .trim()
+    .min(10, "criterion must be at least 10 characters")
+    .max(500, "criterion must be 500 characters or fewer"),
+  min_score: z
+    .number()
+    .int("min_score must be an integer")
+    .min(0, "min_score must be between 0 and 100")
+    .max(100, "min_score must be between 0 and 100")
+    .default(70),
+  baseline_run_id: z.string().uuid("baseline_run_id must be a UUID").optional(),
+});
+export type LlmJudgeConfigInput = z.infer<typeof llmJudgeConfigSchema>;
+
 export const assertionInputSchema = z.object({
   assertion_type: z.enum([
     "json_schema_valid",
