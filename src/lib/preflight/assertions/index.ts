@@ -18,13 +18,17 @@ import {
   type FieldMatchesConfig,
 } from "./field-matches";
 import { evaluateFieldInSet, type FieldInSetConfig } from "./field-in-set";
+import {
+  evaluateLatencyUnderMs,
+  type LatencyUnderMsConfig,
+} from "./latency-under-ms";
 
 /**
- * PR #1 evaluator covers assertion types 1-4 (json_schema_valid,
- * field_present, field_matches, field_in_set). Types 5-7 (llm_judge,
- * latency_under_ms, cost_under_cents) land in PR #2 — until then they
- * record as a non-fatal "unsupported" outcome so a misconfigured DB row
- * does not crash a run.
+ * Assertion router. Types 1-4 (json_schema_valid, field_present,
+ * field_matches, field_in_set) and type 5 (latency_under_ms) are wired.
+ * Types 6-7 (cost_under_cents, llm_judge) are wired incrementally in
+ * PR #2 — until then they record as a non-fatal "unsupported" outcome so
+ * a misconfigured DB row does not crash a run.
  */
 export function evaluateAssertion(
   assertion: Pick<AssertionRow, "id" | "assertion_type" | "config" | "severity">,
@@ -86,8 +90,20 @@ export function evaluateAssertion(
         message: result.message,
       };
     }
+    case "latency_under_ms": {
+      const result = evaluateLatencyUnderMs(
+        config as unknown as LatencyUnderMsConfig,
+        ctx.latency_ms,
+      );
+      return {
+        assertion_id: assertion.id,
+        assertion_type: type,
+        passed: result.passed,
+        severity,
+        message: result.message,
+      };
+    }
     case "llm_judge":
-    case "latency_under_ms":
     case "cost_under_cents":
       return {
         assertion_id: assertion.id,

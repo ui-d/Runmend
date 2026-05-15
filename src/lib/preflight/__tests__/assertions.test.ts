@@ -7,6 +7,7 @@ import { evaluateJsonSchema } from "@/lib/preflight/assertions/json-schema";
 import { evaluateFieldPresent } from "@/lib/preflight/assertions/field-present";
 import { evaluateFieldMatches } from "@/lib/preflight/assertions/field-matches";
 import { evaluateFieldInSet } from "@/lib/preflight/assertions/field-in-set";
+import { evaluateLatencyUnderMs } from "@/lib/preflight/assertions/latency-under-ms";
 import { readPath, MISSING } from "@/lib/preflight/assertions/field-access";
 import { makeAssertion } from "@/test/factories";
 
@@ -215,6 +216,43 @@ describe("evaluateFieldInSet", () => {
   });
 });
 
+describe("evaluateLatencyUnderMs", () => {
+  it("passes when latency is under the limit", () => {
+    expect(evaluateLatencyUnderMs({ max_ms: 800 }, 500)).toEqual({
+      passed: true,
+      message: null,
+    });
+  });
+  it("passes at the exact boundary (latency === max_ms)", () => {
+    expect(evaluateLatencyUnderMs({ max_ms: 800 }, 800)).toEqual({
+      passed: true,
+      message: null,
+    });
+  });
+  it("fails when latency exceeds the limit with a human-readable overage", () => {
+    const r = evaluateLatencyUnderMs({ max_ms: 800 }, 1240);
+    expect(r.passed).toBe(false);
+    expect(r.message).toBe("Took 1240ms, limit 800ms (55% over)");
+  });
+  it("fails when latency was not recorded (null)", () => {
+    const r = evaluateLatencyUnderMs({ max_ms: 800 }, null);
+    expect(r.passed).toBe(false);
+    expect(r.message).toMatch(/not recorded/i);
+  });
+  it("fails on misconfiguration: zero max_ms", () => {
+    expect(evaluateLatencyUnderMs({ max_ms: 0 }, 100).passed).toBe(false);
+  });
+  it("fails on misconfiguration: negative max_ms", () => {
+    expect(evaluateLatencyUnderMs({ max_ms: -1 }, 100).passed).toBe(false);
+  });
+  it("fails on misconfiguration: non-integer max_ms", () => {
+    expect(evaluateLatencyUnderMs({ max_ms: 1.5 }, 1).passed).toBe(false);
+  });
+  it("fails on misconfiguration: max_ms over the 600000 ceiling", () => {
+    expect(evaluateLatencyUnderMs({ max_ms: 600_001 }, 1).passed).toBe(false);
+  });
+});
+
 describe("evaluateAssertion dispatcher", () => {
   it("routes to json_schema_valid", () => {
     const a = makeAssertion({
@@ -261,7 +299,26 @@ describe("evaluateAssertion dispatcher", () => {
     });
     expect(out.passed).toBe(true);
   });
-  it("returns a passed=true skipped result for PR #2 assertion types", () => {
+  it("routes to latency_under_ms and reads ctx.latency_ms", () => {
+    const a = makeAssertion({
+      assertion_type: "latency_under_ms",
+      config: { max_ms: 1000 },
+    });
+    const pass = evaluateAssertion(a, {
+      output: {},
+      latency_ms: 900,
+      cost_cents: 0,
+    });
+    expect(pass.passed).toBe(true);
+    expect(pass.assertion_type).toBe("latency_under_ms");
+    const fail = evaluateAssertion(a, {
+      output: {},
+      latency_ms: 1500,
+      cost_cents: 0,
+    });
+    expect(fail.passed).toBe(false);
+  });
+  it("still returns a passed=true skipped result for not-yet-wired PR #2 types", () => {
     const a = makeAssertion({ assertion_type: "llm_judge", config: {} });
     const out = evaluateAssertion(a, { output: {}, latency_ms: 0, cost_cents: 0 });
     expect(out.passed).toBe(true);

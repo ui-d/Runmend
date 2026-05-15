@@ -20,6 +20,21 @@ const cronSchema = z
 
 const assertionConfigSchema = z.record(z.string(), jsonValueSchema);
 
+/**
+ * Per-type assertion config schemas (PR #2, types 5–7). These validate the
+ * `config` jsonb for the wired assertion types. They are the single source
+ * of truth for config shape — the assertion evaluators re-validate with
+ * these to stay safe against malformed DB rows.
+ */
+export const latencyUnderMsConfigSchema = z.object({
+  max_ms: z
+    .number()
+    .int("max_ms must be an integer")
+    .positive("max_ms must be positive")
+    .max(600_000, "max_ms must be 600000 or fewer"),
+});
+export type LatencyUnderMsConfigInput = z.infer<typeof latencyUnderMsConfigSchema>;
+
 export const assertionInputSchema = z.object({
   assertion_type: z.enum([
     "json_schema_valid",
