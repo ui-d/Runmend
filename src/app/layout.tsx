@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | Runmend",
   },
   description:
-    "Catch silent failures across every client's Make.com (4 zones) and self-hosted n8n workspace. Six failure detectors, AI post-mortems, per-channel alerting — built for agencies running automations in production.",
+    "Catch silent failures across every client's Make.com (4 zones) and self-hosted n8n workspace. Six failure detectors, AI post-mortems, per-channel alerting. Plus Pre-flight Check — assert workflow output quality, latency and cost before a change ships. Built for agencies running automations in production.",
   keywords: [
     "Make.com monitoring",
     "n8n monitoring",
@@ -28,13 +28,15 @@ export const metadata: Metadata = {
     "n8n",
     "silent failures",
     "credential expiration",
+    "pre-flight testing",
+    "LLM output assertions",
   ],
   authors: [{ name: "Runmend" }],
   creator: "Runmend",
   openGraph: {
     title: "Runmend — Production monitoring for Make.com and n8n agencies",
     description:
-      "Built for agencies running client automations in production. Multi-zone Make.com + self-hosted n8n, six failure detectors, AI post-mortems. Get told before the client does.",
+      "Built for agencies running client automations in production. Multi-zone Make.com + self-hosted n8n, six failure detectors, AI post-mortems, and Pre-flight Check. Get told before the client does.",
     url: siteUrl,
     siteName: "Runmend",
     locale: "en_US",
@@ -44,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Runmend — Production monitoring for Make.com and n8n agencies",
     description:
-      "Built for agencies running client automations in production. Multi-zone Make.com + self-hosted n8n, six failure detectors, AI post-mortems. Get told before the client does.",
+      "Built for agencies running client automations in production. Multi-zone Make.com + self-hosted n8n, six failure detectors, AI post-mortems, and Pre-flight Check. Get told before the client does.",
   },
   robots: {
     index: true,
