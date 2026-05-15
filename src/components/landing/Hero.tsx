@@ -30,38 +30,6 @@ export function Hero() {
         />
       </div>
 
-      {/* Floating platform badges — desktop only */}
-      <div
-        className="hidden lg:flex absolute right-[5%] xl:right-[10%] top-32 flex-col gap-5"
-        aria-hidden="true"
-      >
-        <div className="animate-float rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-lg px-4 py-3 flex items-center gap-3 rotate-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 text-violet-400" fill="currentColor">
-              <path d="M13.5 2L4 7.5V16.5L13.5 22L23 16.5V7.5L13.5 2ZM13.5 5.5L19 8.5L13.5 11.5L8 8.5L13.5 5.5Z" />
-            </svg>
-          </span>
-          <div className="text-left">
-            <p className="text-sm font-semibold">Make</p>
-            <p className="text-[10px] text-muted-foreground">Synced 2m ago</p>
-          </div>
-          <span className="h-2 w-2 rounded-full bg-emerald-500 ml-1" />
-        </div>
-
-        <div className="animate-float-delayed rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-lg px-4 py-3 flex items-center gap-3 -rotate-2 ml-6">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 text-orange-400" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6z" />
-            </svg>
-          </span>
-          <div className="text-left">
-            <p className="text-sm font-semibold">n8n</p>
-            <p className="text-[10px] text-muted-foreground">Token ok · 21d</p>
-          </div>
-          <span className="h-2 w-2 rounded-full bg-emerald-500 ml-1" />
-        </div>
-      </div>
-
       <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground mb-8">
         <span className="relative flex h-3 w-3">
           <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-red-400 opacity-75" />
@@ -104,6 +72,38 @@ export function Hero() {
         <Sparkles className="h-3 w-3" />
         Free forever on 1 profile · Claude Sonnet diagnostics included
       </p>
+
+      {/* Live connection status — in-flow, visible at all breakpoints */}
+      <div
+        aria-hidden="true"
+        className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
+      >
+        <div className="w-full sm:w-auto sm:min-w-[200px] rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-lg px-4 py-3 flex items-center gap-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 text-violet-400" fill="currentColor">
+              <path d="M13.5 2L4 7.5V16.5L13.5 22L23 16.5V7.5L13.5 2ZM13.5 5.5L19 8.5L13.5 11.5L8 8.5L13.5 5.5Z" />
+            </svg>
+          </span>
+          <div className="text-left">
+            <p className="text-sm font-semibold">Make</p>
+            <p className="text-[10px] text-muted-foreground">Synced 2m ago</p>
+          </div>
+          <span className="h-2 w-2 rounded-full bg-emerald-500 ml-auto" />
+        </div>
+
+        <div className="w-full sm:w-auto sm:min-w-[200px] rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-lg px-4 py-3 flex items-center gap-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 text-orange-400" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6z" />
+            </svg>
+          </span>
+          <div className="text-left">
+            <p className="text-sm font-semibold">n8n</p>
+            <p className="text-[10px] text-muted-foreground">Token ok · 21d</p>
+          </div>
+          <span className="h-2 w-2 rounded-full bg-emerald-500 ml-auto" />
+        </div>
+      </div>
 
       <div className="mt-12 grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
         <a
