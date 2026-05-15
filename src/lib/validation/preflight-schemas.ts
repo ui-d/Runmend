@@ -35,6 +35,16 @@ export const latencyUnderMsConfigSchema = z.object({
 });
 export type LatencyUnderMsConfigInput = z.infer<typeof latencyUnderMsConfigSchema>;
 
+export const costUnderCentsConfigSchema = z.object({
+  max_cents: z
+    .number()
+    .int("max_cents must be an integer")
+    .positive("max_cents must be positive")
+    .max(100_000, "max_cents must be 100000 or fewer"),
+  scope: z.enum(["total", "llm_only"]).default("total"),
+});
+export type CostUnderCentsConfigInput = z.infer<typeof costUnderCentsConfigSchema>;
+
 export const assertionInputSchema = z.object({
   assertion_type: z.enum([
     "json_schema_valid",

@@ -318,6 +318,45 @@ describe("evaluateAssertion dispatcher", () => {
     });
     expect(fail.passed).toBe(false);
   });
+  it("routes to cost_under_cents for n8n and carries details", () => {
+    const a = makeAssertion({
+      assertion_type: "cost_under_cents",
+      config: { max_cents: 100 },
+    });
+    const out = evaluateAssertion(a, {
+      output: {
+        llmCalls: [
+          {
+            nodeName: "n",
+            model: "openai/gpt-4o-mini",
+            tokenUsage: { promptTokens: 1000, completionTokens: 1000, totalTokens: 2000 },
+          },
+        ],
+      },
+      latency_ms: 0,
+      cost_cents: 0,
+      platform: "n8n",
+    });
+    expect(out.passed).toBe(true);
+    expect(out.assertion_type).toBe("cost_under_cents");
+    expect(out.details).toBeTruthy();
+  });
+  it("forces warn severity for cost_under_cents on a Make scenario", () => {
+    const a = makeAssertion({
+      assertion_type: "cost_under_cents",
+      config: { max_cents: 100 },
+      severity: "fail",
+    });
+    const out = evaluateAssertion(a, {
+      output: { anything: 1 },
+      latency_ms: 0,
+      cost_cents: 0,
+      platform: "make",
+    });
+    expect(out.passed).toBe(false);
+    expect(out.severity).toBe("warn");
+    expect(out.reason).toBe("platform_unsupported");
+  });
   it("still returns a passed=true skipped result for not-yet-wired PR #2 types", () => {
     const a = makeAssertion({ assertion_type: "llm_judge", config: {} });
     const out = evaluateAssertion(a, { output: {}, latency_ms: 0, cost_cents: 0 });

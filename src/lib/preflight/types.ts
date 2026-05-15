@@ -49,6 +49,14 @@ export interface SingleAssertionOutcome {
   passed: boolean;
   severity: "fail" | "warn";
   message: string | null;
+  /**
+   * Machine-readable cause for non-pass outcomes that are product gaps
+   * rather than user errors (e.g. "platform_unsupported",
+   * "cost_indeterminate"). Used by the UI to render a neutral state.
+   */
+  reason?: string;
+  /** Structured detail for richer assertions (cost breakdown, judge reasoning). */
+  details?: Json;
 }
 
 export interface InputExecutionOutcome {
@@ -64,4 +72,10 @@ export interface ExecutionContext {
   output: Json | null;
   latency_ms: number | null;
   cost_cents: number | null;
+  /**
+   * Platform of the scenario's connection. Populated by the executor;
+   * optional so legacy callers/tests constructing a context inline still
+   * compile. `cost_under_cents` requires it (Make is unsupported).
+   */
+  platform?: "make" | "n8n";
 }

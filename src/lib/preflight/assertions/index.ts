@@ -22,6 +22,10 @@ import {
   evaluateLatencyUnderMs,
   type LatencyUnderMsConfig,
 } from "./latency-under-ms";
+import {
+  evaluateCostUnderCents,
+  type CostUnderCentsConfig,
+} from "./cost-under-cents";
 
 /**
  * Assertion router. Types 1-4 (json_schema_valid, field_present,
@@ -103,8 +107,24 @@ export function evaluateAssertion(
         message: result.message,
       };
     }
+    case "cost_under_cents": {
+      const result = evaluateCostUnderCents(
+        config as unknown as CostUnderCentsConfig,
+        ctx.output,
+        ctx.platform,
+      );
+      return {
+        assertion_id: assertion.id,
+        assertion_type: type,
+        passed: result.passed,
+        // Product-gap outcomes never fail a run, regardless of config.
+        severity: result.forceWarn ? "warn" : severity,
+        message: result.message,
+        ...(result.reason ? { reason: result.reason } : {}),
+        ...(result.details !== undefined ? { details: result.details } : {}),
+      };
+    }
     case "llm_judge":
-    case "cost_under_cents":
       return {
         assertion_id: assertion.id,
         assertion_type: type,
