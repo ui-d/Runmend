@@ -50,11 +50,12 @@ export function Hero() {
         </span>
       </div>
 
-      <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl max-w-4xl">
+      <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-[4.55rem] lg:leading-[1.08] max-w-4xl lg:max-w-none text-balance">
         A client workflow just failed.{" "}
+        <br className="hidden lg:block" />
         <span className="text-muted-foreground">Runmend noticed —</span>{" "}
         <span className="bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
-          and already knows why.
+          knows why.
         </span>
       </h1>
 
