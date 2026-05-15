@@ -1,8 +1,14 @@
+import type { Json } from "@/lib/database.types";
 import { latencyUnderMsConfigSchema } from "@/lib/validation/preflight-schemas";
 import type { AssertionEvaluation } from "./json-schema";
 
 export interface LatencyUnderMsConfig {
   max_ms: number;
+}
+
+export interface LatencyEvaluation extends AssertionEvaluation {
+  /** `{ latency_ms, max_ms }` so the UI can render an actual-vs-limit bar. */
+  details?: Json;
 }
 
 /**
@@ -17,7 +23,7 @@ export interface LatencyUnderMsConfig {
 export function evaluateLatencyUnderMs(
   config: LatencyUnderMsConfig,
   latencyMs: number | null,
-): AssertionEvaluation {
+): LatencyEvaluation {
   const parsed = latencyUnderMsConfigSchema.safeParse(config);
   if (!parsed.success) {
     return {
@@ -26,19 +32,22 @@ export function evaluateLatencyUnderMs(
     };
   }
   const { max_ms } = parsed.data;
+  const details: Json = { latency_ms: latencyMs, max_ms };
 
   if (latencyMs === null) {
     return {
       passed: false,
       message: "Latency was not recorded for this run; cannot evaluate.",
+      details,
     };
   }
   if (latencyMs <= max_ms) {
-    return { passed: true, message: null };
+    return { passed: true, message: null, details };
   }
   const overPct = Math.round(((latencyMs - max_ms) / max_ms) * 100);
   return {
     passed: false,
     message: `Took ${latencyMs}ms, limit ${max_ms}ms (${overPct}% over)`,
+    details,
   };
 }

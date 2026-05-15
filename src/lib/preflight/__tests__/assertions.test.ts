@@ -218,13 +218,13 @@ describe("evaluateFieldInSet", () => {
 
 describe("evaluateLatencyUnderMs", () => {
   it("passes when latency is under the limit", async () => {
-    expect(evaluateLatencyUnderMs({ max_ms: 800 }, 500)).toEqual({
+    expect(evaluateLatencyUnderMs({ max_ms: 800 }, 500)).toMatchObject({
       passed: true,
       message: null,
     });
   });
   it("passes at the exact boundary (latency === max_ms)", async () => {
-    expect(evaluateLatencyUnderMs({ max_ms: 800 }, 800)).toEqual({
+    expect(evaluateLatencyUnderMs({ max_ms: 800 }, 800)).toMatchObject({
       passed: true,
       message: null,
     });

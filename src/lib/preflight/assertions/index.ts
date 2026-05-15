@@ -111,6 +111,7 @@ export async function evaluateAssertion(
         passed: result.passed,
         severity,
         message: result.message,
+        ...(result.details !== undefined ? { details: result.details } : {}),
       };
     }
     case "cost_under_cents": {

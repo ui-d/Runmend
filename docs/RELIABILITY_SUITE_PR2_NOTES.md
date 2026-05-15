@@ -112,6 +112,36 @@ are injected through the existing `SynchronousExecutorDeps` DI seam (mirroring
 returns a non-fatal warn (never crashes a run). Tests inject a mock — zero real
 Anthropic calls in unit/CI; one gated integration test only.
 
+## Additional implementation notes (approved deviations, cont.)
+
+7. **Scenario-create warning is POST-only.** `scenarioUpdateSchema`
+   (`PATCH /api/scenarios/[id]`) has no assertion or connection field — a
+   `cost_under_cents` assertion can only be introduced at create time. The
+   spec asked for the Make-cost warning on "POST and PATCH"; PATCH has no
+   assertion path, so the warning is correctly POST-only.
+
+8. **`latency_under_ms` now returns `details`.** To render the actual-vs-limit
+   UI bar, the latency evaluation carries `details: { latency_ms, max_ms }`
+   (threaded through the dispatcher like cost/judge). Two latency unit tests
+   switched from `toEqual` to `toMatchObject` to accommodate the extra field.
+
+## Pending follow-ups (Stop-and-check-in with Dawid)
+
+- **Live runs-page E2E is pending a seeded fixture.** Verifying
+  `/scenarios/[id]/runs/[runId]` rendering of all three new assertion types
+  end-to-end requires a `preflight_run_results` row whose `assertion_results`
+  contains latency/cost/judge outcomes in the test workspace, plus working
+  `test@runmend.app` auth. Neither a seeded run nor a completable login was
+  available in the implementation environment (live Supabase + cookie
+  consent). The component is lint-clean, type-clean, and covered by
+  `next build`; Playwright `data-testid` hooks (`latency-bar`,
+  `cost-breakdown`, `make-cost-gap`, `judge-detail`, `judge-score`,
+  `judge-confidence`, `judge-unavailable`) are in place for the E2E once a
+  fixture exists. Same blocker class as the n8n golden cost fixture.
+
 ## Token cost observed during dev/test
 
-_To be filled in before PR submission (Task G / Verification)._
+All unit/CI tests mock Anthropic — **$0 real token spend**. The single gated
+real-API integration test (`judge/__tests__/integration.test.ts`) was not run
+in this environment (no `RUN_INTEGRATION_TESTS`); when run it logs the
+observed judge cost (~0.2–0.5¢ for the tiny fixture at Sonnet 4.5 rates).
