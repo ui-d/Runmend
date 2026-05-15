@@ -1,9 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/database.types";
 import type { PlatformAdapter } from "@/lib/platform-adapters/types";
+import Anthropic from "@anthropic-ai/sdk";
 import { createAdapter } from "@/lib/platform-adapters";
 import { decrypt } from "@/lib/crypto";
 import { evaluateAllAssertions } from "@/lib/preflight/assertions";
+import type { AnthropicLike } from "@/lib/preflight/judge/client";
+import type { JudgeDeps } from "@/lib/preflight/assertions/llm-judge";
 import { BATCH_SIZE, MAX_INPUTS_PER_RUN } from "@/lib/preflight/limits";
 import type {
   AssertionRow,
@@ -21,11 +24,53 @@ import type {
 type Admin = SupabaseClient<Database>;
 type ConnectionRow = Database["public"]["Tables"]["platform_connections"]["Row"];
 
+/** Shared Claude client for `llm_judge`; undefined when no API key is set. */
+export interface JudgeClientHolder {
+  client: AnthropicLike;
+}
+
 export interface SynchronousExecutorDeps {
   /** Service-role client used for all writes. RLS is bypassed by design. */
   loadAdmin: () => Admin;
   /** Override point for tests — produces a working PlatformAdapter from a stored connection. */
   buildAdapter?: (connection: ConnectionRow) => PlatformAdapter;
+  /** Override point for tests — produces the shared judge client, or undefined to disable. */
+  buildJudge?: () => JudgeClientHolder | undefined;
+}
+
+/**
+ * Default judge client: a real Anthropic SDK client when `ANTHROPIC_API_KEY`
+ * is configured, otherwise undefined so `llm_judge` degrades to a non-fatal
+ * warn instead of crashing the run.
+ */
+export function defaultBuildJudge(): JudgeClientHolder | undefined {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return undefined;
+  return { client: new Anthropic({ apiKey }) as unknown as AnthropicLike };
+}
+
+/**
+ * Fetch the baseline run's recorded output for a single input, used by
+ * `llm_judge` when `baseline_run_id` is set. Defensive: any error (RLS,
+ * missing row) yields null so the judge scores absolutely rather than crashing.
+ */
+async function fetchBaselineOutput(
+  admin: Admin,
+  baselineRunId: string,
+  inputId: string,
+): Promise<Json | null> {
+  try {
+    const { data, error } = await admin
+      .from("preflight_run_results")
+      .select("output_data")
+      .eq("run_id", baselineRunId)
+      .eq("input_id", inputId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.output_data;
+  } catch {
+    return null;
+  }
 }
 
 function defaultBuildAdapter(connection: ConnectionRow): PlatformAdapter {
@@ -106,6 +151,10 @@ export class SynchronousRunExecutor implements RunExecutor {
       };
     }
 
+    const judgeHolder = (this.deps.buildJudge ?? defaultBuildJudge)();
+    const platform: "make" | "n8n" =
+      connection.platform === "n8n" ? "n8n" : "make";
+
     let passedCount = 0;
     let failedCount = 0;
     let erroredCount = 0;
@@ -120,7 +169,13 @@ export class SynchronousRunExecutor implements RunExecutor {
       }
       const batch = inputs.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
-        batch.map((input) => runOneInput(adapter, scenario, assertions, input)),
+        batch.map((input) =>
+          runOneInput(adapter, scenario, assertions, input, {
+            platform,
+            judgeHolder,
+            admin,
+          }),
+        ),
       );
 
       for (let j = 0; j < batch.length; j++) {
@@ -171,7 +226,7 @@ export class SynchronousRunExecutor implements RunExecutor {
       passedCount,
       failedCount,
       erroredCount,
-      totalCostCents: runningCostCents,
+      totalCostCents: Math.round(runningCostCents),
     };
   }
 }
@@ -257,11 +312,18 @@ interface InputOutcome {
   errorMessage: string | null;
 }
 
+interface EvalEnv {
+  platform: "make" | "n8n";
+  judgeHolder: JudgeClientHolder | undefined;
+  admin: Admin;
+}
+
 async function runOneInput(
   adapter: PlatformAdapter,
   scenario: ScenarioRow,
   assertions: AssertionRow[],
   input: InputRow,
+  env: EvalEnv,
 ): Promise<InputOutcome> {
   const exec = await adapter.executeWorkflow(scenario.workflow_external_id, input.input_data);
   if (!exec.ok || exec.output == null) {
@@ -276,18 +338,29 @@ async function runOneInput(
     };
   }
   const output = exec.output as Json;
-  const { passed, outcomes } = evaluateAllAssertions(assertions, {
+  const judge: JudgeDeps | undefined = env.judgeHolder
+    ? {
+        client: env.judgeHolder.client,
+        getBaselineResult: (baselineRunId: string) =>
+          fetchBaselineOutput(env.admin, baselineRunId, input.id),
+      }
+    : undefined;
+  const { passed, outcomes } = await evaluateAllAssertions(assertions, {
     output,
     latency_ms: exec.latencyMs,
     cost_cents: 0,
+    platform: env.platform,
+    judge,
   });
+  // Judge token spend rolls into the run's cost total (existing plumbing).
+  const costCents = outcomes.reduce((sum, o) => sum + (o.costCents ?? 0), 0);
   return {
     output,
     passed,
     errored: false,
     outcomes,
     latencyMs: exec.latencyMs,
-    costCents: 0,
+    costCents,
     errorMessage: null,
   };
 }
@@ -307,7 +380,10 @@ async function insertResult(
     passed: outcome.passed,
     assertion_results: outcome.outcomes as unknown as Json,
     latency_ms: outcome.latencyMs,
-    cost_cents: outcome.costCents,
+    // Column is integer cents; sub-cent judge costs round here (the accurate
+    // fractional sum is preserved in the run-level total_cost_cents).
+    cost_cents:
+      outcome.costCents == null ? null : Math.round(outcome.costCents),
     error_message: outcome.errorMessage,
   });
   if (error) throw error;
@@ -368,7 +444,7 @@ async function finalizeRun(
       failed_count: fin.failedCount,
       errored_count: fin.erroredCount,
       pass_rate: fin.passRate,
-      total_cost_cents: fin.totalCostCents,
+      total_cost_cents: Math.round(fin.totalCostCents),
       total_latency_ms: fin.totalLatencyMs,
       completed_at: new Date().toISOString(),
     })

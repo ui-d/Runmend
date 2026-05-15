@@ -26,18 +26,24 @@ import {
   evaluateCostUnderCents,
   type CostUnderCentsConfig,
 } from "./cost-under-cents";
+import {
+  evaluateLlmJudge,
+  type LlmJudgeConfig,
+  type JudgeDeps,
+} from "./llm-judge";
 
 /**
- * Assertion router. Types 1-4 (json_schema_valid, field_present,
- * field_matches, field_in_set) and type 5 (latency_under_ms) are wired.
- * Types 6-7 (cost_under_cents, llm_judge) are wired incrementally in
- * PR #2 — until then they record as a non-fatal "unsupported" outcome so
- * a misconfigured DB row does not crash a run.
+ * Assertion router for all 7 types. Types 1-6 evaluate synchronously in
+ * runtime (the function is async only so `llm_judge` can do I/O — the
+ * synchronous evaluators are still called directly, not wrapped in a
+ * needless `Promise.resolve`). `llm_judge` awaits an injected Claude client
+ * (`ctx.judge`); when judge deps are absent it degrades to a non-fatal warn
+ * so a run never crashes on a missing API key.
  */
-export function evaluateAssertion(
+export async function evaluateAssertion(
   assertion: Pick<AssertionRow, "id" | "assertion_type" | "config" | "severity">,
   ctx: ExecutionContext,
-): SingleAssertionOutcome {
+): Promise<SingleAssertionOutcome> {
   const type = assertion.assertion_type as AssertionType;
   const config = (assertion.config ?? {}) as Record<string, Json>;
   const severity = (assertion.severity === "warn" ? "warn" : "fail") as
@@ -124,14 +130,26 @@ export function evaluateAssertion(
         ...(result.details !== undefined ? { details: result.details } : {}),
       };
     }
-    case "llm_judge":
+    case "llm_judge": {
+      const result = await evaluateLlmJudge(
+        config as unknown as LlmJudgeConfig,
+        ctx.output,
+        ctx.judge as JudgeDeps | undefined,
+      );
       return {
         assertion_id: assertion.id,
         assertion_type: type,
-        passed: true,
-        severity,
-        message: `Assertion type "${type}" is not yet supported in PR #1; skipped`,
+        passed: result.passed,
+        // Judge degradations (no key, low confidence, transport) never fail.
+        severity: result.forceWarn ? "warn" : severity,
+        message: result.message,
+        ...(result.reason ? { reason: result.reason } : {}),
+        ...(result.details !== undefined ? { details: result.details } : {}),
+        ...(result.costCents !== undefined
+          ? { costCents: result.costCents }
+          : {}),
       };
+    }
     default:
       return {
         assertion_id: assertion.id,
@@ -148,13 +166,15 @@ export function evaluateAssertion(
  * only when every `severity='fail'` assertion passes; warnings record but
  * do not fail the input.
  */
-export function evaluateAllAssertions(
+export async function evaluateAllAssertions(
   assertions: ReadonlyArray<
     Pick<AssertionRow, "id" | "assertion_type" | "config" | "severity">
   >,
   ctx: ExecutionContext,
-): { passed: boolean; outcomes: SingleAssertionOutcome[] } {
-  const outcomes = assertions.map((a) => evaluateAssertion(a, ctx));
+): Promise<{ passed: boolean; outcomes: SingleAssertionOutcome[] }> {
+  const outcomes = await Promise.all(
+    assertions.map((a) => evaluateAssertion(a, ctx)),
+  );
   const passed = outcomes.every((o) => o.passed || o.severity === "warn");
   return { passed, outcomes };
 }

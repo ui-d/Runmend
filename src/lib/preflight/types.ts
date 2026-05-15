@@ -1,4 +1,5 @@
 import type { Database, Json } from "@/lib/database.types";
+import type { JudgeDeps } from "./assertions/llm-judge";
 
 type Tables = Database["public"]["Tables"];
 
@@ -62,6 +63,12 @@ export interface SingleAssertionOutcome {
   reason?: string;
   /** Structured detail for richer assertions (cost breakdown, judge reasoning). */
   details?: Json;
+  /**
+   * Token cost in cents incurred evaluating this assertion (currently only
+   * `llm_judge`). Summed by the executor into `preflight_runs.total_cost_cents`
+   * so the operator sees judge spend in the run rollup.
+   */
+  costCents?: number;
 }
 
 export interface InputExecutionOutcome {
@@ -83,4 +90,10 @@ export interface ExecutionContext {
    * compile. `cost_under_cents` requires it (Make is unsupported).
    */
   platform?: "make" | "n8n";
+  /**
+   * Injected judge dependencies (Claude client + per-input baseline reader),
+   * threaded by the executor via its DI seam. Absent ⇒ `llm_judge` records a
+   * non-fatal warn.
+   */
+  judge?: JudgeDeps;
 }
