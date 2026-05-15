@@ -9,6 +9,7 @@ Runmend is production monitoring for **Make.com** and **n8n** agencies. Connect 
 - **AI post-mortem per audit** — Claude Sonnet writes a three-part diagnostic (overall health, most dangerous issue, what to do next) so you can forward it to a client in one click
 - **Per-channel alerting** — email + Slack with per-profile routing, severity-tuned defaults, and notification dedupe
 - **Health scored 0–100** on a weighted formula (error rate 40%, inactive ratio 20%, failure trend 20%, coverage 20%) with persistent snapshots for trend visibility
+- **Pre-flight Reliability Suite** — run real inputs against 7 assertion types before drift ships: schema/field checks, `latency_under_ms`, `cost_under_cents` (per-LLM-node token cost from n8n output; Make on the roadmap), and `llm_judge` (Claude scores output quality against a criterion, with optional baseline comparison). Moves monitoring from "did it run" to "is the output good at a reasonable cost". _(Placeholder copy — marketing to refine.)_
 - **Multi-tenant workspaces** with role-based access, AES-256-GCM credential encryption, and scheduled audits via Vercel Cron (15-min global sync)
 - **Lifetime Deal (LTD) plan** alongside subscription tiers, plus VAT-aware invoices and Stripe billing portal
 

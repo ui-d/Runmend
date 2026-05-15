@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock, type SupabaseMock } from "@/test/supabase-mock";
 import { makeRequest, readJson } from "@/test/next-mocks";
 import {
+  makeConnection,
   makeMember,
   makeScenario,
   makeSubscription,
@@ -133,5 +134,47 @@ describe("POST /api/scenarios", () => {
     expect(res.status).toBe(201);
     const data = await readJson(res);
     expect(data.scenario).toBeDefined();
+  });
+
+  function setupCreateOk() {
+    mock.setUser(makeUser({ id: TEST_USER_ID }));
+    mock.setTable("workspace_members", [makeMember({ role: "owner" })]);
+    mock.setTable("subscriptions", [makeSubscription({ plan: "pro" })]);
+    mock.setTable("preflight_scenarios", []);
+    admin.setTable("preflight_scenarios", []);
+    admin.setTable("preflight_inputs", []);
+    admin.setTable("preflight_assertions", []);
+  }
+  const costBody = {
+    ...validBody,
+    assertions: [{ assertion_type: "cost_under_cents", config: { max_cents: 100 } }],
+  };
+
+  it("returns a non-blocking warning for cost_under_cents on a Make connection", async () => {
+    setupCreateOk();
+    admin.setTable("platform_connections", [
+      makeConnection({ id: TEST_CONNECTION_ID, platform: "make" }),
+    ]);
+    const res = await POST(
+      makeRequest("/api/scenarios", { method: "POST", body: costBody }),
+    );
+    expect(res.status).toBe(201);
+    const data = await readJson(res);
+    expect(data.scenario).toBeDefined();
+    expect(data.warnings).toHaveLength(1);
+    expect(data.warnings[0].code).toBe("cost_unsupported_make");
+  });
+
+  it("does not warn for cost_under_cents on an n8n connection", async () => {
+    setupCreateOk();
+    admin.setTable("platform_connections", [
+      makeConnection({ id: TEST_CONNECTION_ID, platform: "n8n" }),
+    ]);
+    const res = await POST(
+      makeRequest("/api/scenarios", { method: "POST", body: costBody }),
+    );
+    expect(res.status).toBe(201);
+    const data = await readJson(res);
+    expect(data.warnings).toBeUndefined();
   });
 });

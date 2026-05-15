@@ -123,3 +123,19 @@ Don't raise prices in the same quarter as a positioning shift — it confuses th
 ## Bottom line
 
 The current pricing isn't broken — it just wasn't designed for the ICP we just sharpened. The right next move is **measurement, not surgery**. Pull the analytics in 4–6 weeks, then revisit Q1–Q4 above with data instead of intuition.
+
+---
+
+## Addendum — Reliability Suite scope (2026-05-15, PR #2)
+
+The Agency/Pro tier now ships the **full Pre-flight Reliability Suite (assertion types 1–7)**, not just the schema/field checks (1–4):
+
+- `latency_under_ms`, `cost_under_cents`, `llm_judge` are wired (PR #2).
+- `cost_under_cents` is **n8n-only**; Make cost is an explicit, non-failing
+  known gap on the roadmap (see `docs/MAKE_COST_EXTRACTION_GAP.md`).
+- `llm_judge` consumes Claude tokens per evaluated input. This is a
+  **variable COGS line** on plans that expose Pre-flight — judge spend rolls
+  into `preflight_runs.total_cost_cents` and is bounded per scenario by the
+  existing `cost_cap_cents`. Worth modelling gross-margin-per-run before any
+  pricing change that increases Pre-flight quotas. No price points change in
+  this PR (analysis/scope only, consistent with this doc's stance).

@@ -14,3 +14,12 @@ export const DEFAULT_COST_CAP_CENTS = 500;
  * `preflight_runs.drift_eligible` stays false.
  */
 export const MIN_INPUTS_FOR_DRIFT = 20;
+
+/**
+ * `llm_judge` caps. Output is bounded so a runaway judge response cannot
+ * blow the run's cost budget; the prompt is bounded (~8000 tokens at a
+ * conservative ~4 chars/token) so a huge `output_data` is rejected with a
+ * clear error instead of silently truncated.
+ */
+export const JUDGE_MAX_OUTPUT_TOKENS = 2_000;
+export const JUDGE_MAX_PROMPT_CHARS = 32_000;

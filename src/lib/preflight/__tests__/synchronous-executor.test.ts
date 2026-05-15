@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 
 vi.mock("@/lib/crypto", () => ({
   decrypt: (v: string) => v.replace(/^enc:/, ""),
@@ -10,8 +10,12 @@ vi.mock("@/lib/platform-adapters", () => ({
 }));
 
 import { createAdapter } from "@/lib/platform-adapters";
-import { SynchronousRunExecutor } from "@/lib/preflight/executor/synchronous";
+import {
+  SynchronousRunExecutor,
+  defaultBuildJudge,
+} from "@/lib/preflight/executor/synchronous";
 import { createSupabaseMock } from "@/test/supabase-mock";
+import { createAnthropicMock } from "@/test/anthropic-mock";
 
 const createAdapterMock = vi.mocked(createAdapter);
 import {
@@ -390,5 +394,128 @@ describe("SynchronousRunExecutor", () => {
     const payload = runInsert!.payload as Record<string, unknown>;
     expect(payload.triggered_by).toBe("schedule");
     expect(payload.triggered_by_user).toBe(TEST_UUID);
+  });
+
+  it("rolls llm_judge token cost into the run total via existing plumbing", async () => {
+    const { mock, client, adapter } = wire();
+    mock.setTable("preflight_scenarios", [makeScenario()]);
+    mock.setTable("preflight_assertions", [
+      makeAssertion({
+        id: "j1",
+        assertion_type: "llm_judge",
+        config: { criterion: "The reply greets the user politely and clearly." },
+      }),
+    ]);
+    mock.setTable("preflight_inputs", [makePreflightInput({ id: "i1" })]);
+    mock.setTable("platform_connections", [
+      makeConnection({ id: TEST_CONNECTION_ID }),
+    ]);
+    vi.mocked(adapter.executeWorkflow).mockResolvedValue({
+      ok: true,
+      output: { reply: "Hello, how can I help?" },
+      latencyMs: 20,
+    });
+    const anthropic = createAnthropicMock();
+    anthropic.create.mockResolvedValue({
+      id: "m",
+      type: "message",
+      role: "assistant",
+      model: "claude-sonnet-4-5-20250929",
+      stop_reason: "end_turn",
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ score: 90, reasoning: "Polite.", confidence: "high" }),
+        },
+      ],
+      // 1M in @ $3/M + 1M out @ $15/M = $18.00 = 1800 cents
+      usage: { input_tokens: 1_000_000, output_tokens: 1_000_000 },
+    });
+
+    const executor = new SynchronousRunExecutor({
+      loadAdmin: loadAdmin(client),
+      buildAdapter: buildAdapter(adapter),
+      buildJudge: () => ({ client: anthropic.client }),
+    });
+    const result = await executor.execute({
+      scenarioId: TEST_SCENARIO_ID,
+      triggeredBy: "manual",
+    });
+
+    expect(result.status).toBe("passed");
+    expect(result.totalCostCents).toBe(1800);
+    const finalize = mock
+      .getCalls("preflight_runs")
+      .find((c) => c.op === "update");
+    expect(
+      (finalize!.payload as Record<string, unknown>).total_cost_cents,
+    ).toBe(1800);
+    const resultInsert = mock
+      .getCalls("preflight_run_results")
+      .find((c) => c.op === "insert");
+    expect((resultInsert!.payload as Record<string, unknown>).cost_cents).toBe(
+      1800,
+    );
+  });
+
+  it("records cost_under_cents on a Make scenario as a non-failing platform_unsupported warn", async () => {
+    const { mock, client, adapter } = wire();
+    mock.setTable("preflight_scenarios", [makeScenario()]);
+    mock.setTable("preflight_assertions", [
+      makeAssertion({
+        id: "c1",
+        assertion_type: "cost_under_cents",
+        config: { max_cents: 100 },
+        severity: "fail",
+      }),
+    ]);
+    mock.setTable("preflight_inputs", [makePreflightInput({ id: "i1" })]);
+    mock.setTable("platform_connections", [
+      makeConnection({ id: TEST_CONNECTION_ID, platform: "make" }),
+    ]);
+    vi.mocked(adapter.executeWorkflow).mockResolvedValue({
+      ok: true,
+      output: { anything: 1 },
+      latencyMs: 10,
+    });
+
+    const executor = new SynchronousRunExecutor({
+      loadAdmin: loadAdmin(client),
+      buildAdapter: buildAdapter(adapter),
+    });
+    const result = await executor.execute({
+      scenarioId: TEST_SCENARIO_ID,
+      triggeredBy: "manual",
+    });
+
+    // Product gap → warn, so the input (and run) still passes.
+    expect(result.status).toBe("passed");
+    const resultInsert = mock
+      .getCalls("preflight_run_results")
+      .find((c) => c.op === "insert");
+    const outcomes = (resultInsert!.payload as Record<string, unknown>)
+      .assertion_results as Array<Record<string, unknown>>;
+    expect(outcomes[0]!.reason).toBe("platform_unsupported");
+    expect(outcomes[0]!.severity).toBe("warn");
+  });
+});
+
+describe("defaultBuildJudge", () => {
+  const original = process.env.ANTHROPIC_API_KEY;
+  afterEach(() => {
+    if (original === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = original;
+  });
+
+  it("returns a client holder when ANTHROPIC_API_KEY is set", () => {
+    process.env.ANTHROPIC_API_KEY = "sk-test-key";
+    const holder = defaultBuildJudge();
+    expect(holder).toBeDefined();
+    expect(holder!.client).toBeTruthy();
+  });
+
+  it("returns undefined when ANTHROPIC_API_KEY is absent", () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    expect(defaultBuildJudge()).toBeUndefined();
   });
 });

@@ -43,6 +43,16 @@ Dashboard → Project → Settings → Environment Variables. Scope: **Productio
 
 **Weryfikacja**: `vercel env ls production | wc -l` ≥ 17. Trigger deploy po dodaniu — jeśli `assertProductionEnv()` znajdzie brak, deploy padnie przed uruchomieniem (zgodne z `instrumentation.ts:7-11`).
 
+> **`ANTHROPIC_API_KEY` — od PR #2 zasila też Pre-flight `llm_judge`.**
+> Każdy input z asercją `llm_judge` wykonuje jeden wywołanie Claude
+> (model = `CLAUDE_MODEL` lub `claude-sonnet-4-5-20250929`), `max_tokens`
+> ograniczone do `JUDGE_MAX_OUTPUT_TOKENS = 2000`, prompt do
+> `JUDGE_MAX_PROMPT_CHARS = 32000`. Koszt tokenów wlicza się do
+> `preflight_runs.total_cost_cents` i jest ograniczony per-scenariusz przez
+> `cost_cap_cents`. **Brak klucza nie wywala runu** — `llm_judge` degraduje
+> do nie-krytycznego warna (`reason: judge_unavailable`). Diagnostyka AI
+> działa jak dotąd; to dodatkowy, opcjonalny konsument tego samego klucza.
+
 ### A2. Domena wpięta do Vercel + SSL aktywny
 
 Vercel → Project → Settings → Domains → Add `<YOUR_DOMAIN>` + `www.<YOUR_DOMAIN>` (przekieruj www→apex). Dodaj rekordy DNS u rejestratora per Vercel instructions. Poczekaj na SSL.

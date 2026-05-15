@@ -20,6 +20,47 @@ const cronSchema = z
 
 const assertionConfigSchema = z.record(z.string(), jsonValueSchema);
 
+/**
+ * Per-type assertion config schemas (PR #2, types 5–7). These validate the
+ * `config` jsonb for the wired assertion types. They are the single source
+ * of truth for config shape — the assertion evaluators re-validate with
+ * these to stay safe against malformed DB rows.
+ */
+export const latencyUnderMsConfigSchema = z.object({
+  max_ms: z
+    .number()
+    .int("max_ms must be an integer")
+    .positive("max_ms must be positive")
+    .max(600_000, "max_ms must be 600000 or fewer"),
+});
+export type LatencyUnderMsConfigInput = z.infer<typeof latencyUnderMsConfigSchema>;
+
+export const costUnderCentsConfigSchema = z.object({
+  max_cents: z
+    .number()
+    .int("max_cents must be an integer")
+    .positive("max_cents must be positive")
+    .max(100_000, "max_cents must be 100000 or fewer"),
+  scope: z.enum(["total", "llm_only"]).default("total"),
+});
+export type CostUnderCentsConfigInput = z.infer<typeof costUnderCentsConfigSchema>;
+
+export const llmJudgeConfigSchema = z.object({
+  criterion: z
+    .string()
+    .trim()
+    .min(10, "criterion must be at least 10 characters")
+    .max(500, "criterion must be 500 characters or fewer"),
+  min_score: z
+    .number()
+    .int("min_score must be an integer")
+    .min(0, "min_score must be between 0 and 100")
+    .max(100, "min_score must be between 0 and 100")
+    .default(70),
+  baseline_run_id: z.string().uuid("baseline_run_id must be a UUID").optional(),
+});
+export type LlmJudgeConfigInput = z.infer<typeof llmJudgeConfigSchema>;
+
 export const assertionInputSchema = z.object({
   assertion_type: z.enum([
     "json_schema_valid",

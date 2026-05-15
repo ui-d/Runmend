@@ -1,4 +1,5 @@
 import type { Database, Json } from "@/lib/database.types";
+import type { JudgeDeps } from "./assertions/llm-judge";
 
 type Tables = Database["public"]["Tables"];
 
@@ -39,9 +40,14 @@ export type AssertionConfig =
   | { type: "field_present"; field: string }
   | { type: "field_matches"; field: string; pattern?: string; equals?: Json }
   | { type: "field_in_set"; field: string; values: ReadonlyArray<Json> }
-  | { type: "llm_judge"; rubric: string; model?: string }
-  | { type: "latency_under_ms"; threshold_ms: number }
-  | { type: "cost_under_cents"; threshold_cents: number };
+  | {
+      type: "llm_judge";
+      criterion: string;
+      min_score?: number;
+      baseline_run_id?: string;
+    }
+  | { type: "latency_under_ms"; max_ms: number }
+  | { type: "cost_under_cents"; max_cents: number; scope?: "total" | "llm_only" };
 
 export interface SingleAssertionOutcome {
   assertion_id: string;
@@ -49,6 +55,20 @@ export interface SingleAssertionOutcome {
   passed: boolean;
   severity: "fail" | "warn";
   message: string | null;
+  /**
+   * Machine-readable cause for non-pass outcomes that are product gaps
+   * rather than user errors (e.g. "platform_unsupported",
+   * "cost_indeterminate"). Used by the UI to render a neutral state.
+   */
+  reason?: string;
+  /** Structured detail for richer assertions (cost breakdown, judge reasoning). */
+  details?: Json;
+  /**
+   * Token cost in cents incurred evaluating this assertion (currently only
+   * `llm_judge`). Summed by the executor into `preflight_runs.total_cost_cents`
+   * so the operator sees judge spend in the run rollup.
+   */
+  costCents?: number;
 }
 
 export interface InputExecutionOutcome {
@@ -64,4 +84,16 @@ export interface ExecutionContext {
   output: Json | null;
   latency_ms: number | null;
   cost_cents: number | null;
+  /**
+   * Platform of the scenario's connection. Populated by the executor;
+   * optional so legacy callers/tests constructing a context inline still
+   * compile. `cost_under_cents` requires it (Make is unsupported).
+   */
+  platform?: "make" | "n8n";
+  /**
+   * Injected judge dependencies (Claude client + per-input baseline reader),
+   * threaded by the executor via its DI seam. Absent ⇒ `llm_judge` records a
+   * non-fatal warn.
+   */
+  judge?: JudgeDeps;
 }

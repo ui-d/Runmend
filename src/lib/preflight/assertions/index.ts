@@ -18,18 +18,32 @@ import {
   type FieldMatchesConfig,
 } from "./field-matches";
 import { evaluateFieldInSet, type FieldInSetConfig } from "./field-in-set";
+import {
+  evaluateLatencyUnderMs,
+  type LatencyUnderMsConfig,
+} from "./latency-under-ms";
+import {
+  evaluateCostUnderCents,
+  type CostUnderCentsConfig,
+} from "./cost-under-cents";
+import {
+  evaluateLlmJudge,
+  type LlmJudgeConfig,
+  type JudgeDeps,
+} from "./llm-judge";
 
 /**
- * PR #1 evaluator covers assertion types 1-4 (json_schema_valid,
- * field_present, field_matches, field_in_set). Types 5-7 (llm_judge,
- * latency_under_ms, cost_under_cents) land in PR #2 — until then they
- * record as a non-fatal "unsupported" outcome so a misconfigured DB row
- * does not crash a run.
+ * Assertion router for all 7 types. Types 1-6 evaluate synchronously in
+ * runtime (the function is async only so `llm_judge` can do I/O — the
+ * synchronous evaluators are still called directly, not wrapped in a
+ * needless `Promise.resolve`). `llm_judge` awaits an injected Claude client
+ * (`ctx.judge`); when judge deps are absent it degrades to a non-fatal warn
+ * so a run never crashes on a missing API key.
  */
-export function evaluateAssertion(
+export async function evaluateAssertion(
   assertion: Pick<AssertionRow, "id" | "assertion_type" | "config" | "severity">,
   ctx: ExecutionContext,
-): SingleAssertionOutcome {
+): Promise<SingleAssertionOutcome> {
   const type = assertion.assertion_type as AssertionType;
   const config = (assertion.config ?? {}) as Record<string, Json>;
   const severity = (assertion.severity === "warn" ? "warn" : "fail") as
@@ -86,16 +100,57 @@ export function evaluateAssertion(
         message: result.message,
       };
     }
-    case "llm_judge":
-    case "latency_under_ms":
-    case "cost_under_cents":
+    case "latency_under_ms": {
+      const result = evaluateLatencyUnderMs(
+        config as unknown as LatencyUnderMsConfig,
+        ctx.latency_ms,
+      );
       return {
         assertion_id: assertion.id,
         assertion_type: type,
-        passed: true,
+        passed: result.passed,
         severity,
-        message: `Assertion type "${type}" is not yet supported in PR #1; skipped`,
+        message: result.message,
+        ...(result.details !== undefined ? { details: result.details } : {}),
       };
+    }
+    case "cost_under_cents": {
+      const result = evaluateCostUnderCents(
+        config as unknown as CostUnderCentsConfig,
+        ctx.output,
+        ctx.platform,
+      );
+      return {
+        assertion_id: assertion.id,
+        assertion_type: type,
+        passed: result.passed,
+        // Product-gap outcomes never fail a run, regardless of config.
+        severity: result.forceWarn ? "warn" : severity,
+        message: result.message,
+        ...(result.reason ? { reason: result.reason } : {}),
+        ...(result.details !== undefined ? { details: result.details } : {}),
+      };
+    }
+    case "llm_judge": {
+      const result = await evaluateLlmJudge(
+        config as unknown as LlmJudgeConfig,
+        ctx.output,
+        ctx.judge as JudgeDeps | undefined,
+      );
+      return {
+        assertion_id: assertion.id,
+        assertion_type: type,
+        passed: result.passed,
+        // Judge degradations (no key, low confidence, transport) never fail.
+        severity: result.forceWarn ? "warn" : severity,
+        message: result.message,
+        ...(result.reason ? { reason: result.reason } : {}),
+        ...(result.details !== undefined ? { details: result.details } : {}),
+        ...(result.costCents !== undefined
+          ? { costCents: result.costCents }
+          : {}),
+      };
+    }
     default:
       return {
         assertion_id: assertion.id,
@@ -112,13 +167,15 @@ export function evaluateAssertion(
  * only when every `severity='fail'` assertion passes; warnings record but
  * do not fail the input.
  */
-export function evaluateAllAssertions(
+export async function evaluateAllAssertions(
   assertions: ReadonlyArray<
     Pick<AssertionRow, "id" | "assertion_type" | "config" | "severity">
   >,
   ctx: ExecutionContext,
-): { passed: boolean; outcomes: SingleAssertionOutcome[] } {
-  const outcomes = assertions.map((a) => evaluateAssertion(a, ctx));
+): Promise<{ passed: boolean; outcomes: SingleAssertionOutcome[] }> {
+  const outcomes = await Promise.all(
+    assertions.map((a) => evaluateAssertion(a, ctx)),
+  );
   const passed = outcomes.every((o) => o.passed || o.severity === "warn");
   return { passed, outcomes };
 }
