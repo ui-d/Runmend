@@ -1,5 +1,10 @@
 # Runmend
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![CI](https://github.com/ui-d/runmend/actions/workflows/ci.yml/badge.svg)](https://github.com/ui-d/runmend/actions/workflows/ci.yml)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
+
 Runmend is production monitoring for **Make.com** and **n8n** agencies. Connect every client account across all four Make zones (us1/eu1/eu2/us2) plus self-hosted n8n, and Runmend runs six failure detectors on each scheduled audit, then has Claude write the post-mortem before you open the tab.
 
 ## What It Does
@@ -9,7 +14,7 @@ Runmend is production monitoring for **Make.com** and **n8n** agencies. Connect 
 - **AI post-mortem per audit** — Claude Sonnet writes a three-part diagnostic (overall health, most dangerous issue, what to do next) so you can forward it to a client in one click
 - **Per-channel alerting** — email + Slack with per-profile routing, severity-tuned defaults, and notification dedupe
 - **Health scored 0–100** on a weighted formula (error rate 40%, inactive ratio 20%, failure trend 20%, coverage 20%) with persistent snapshots for trend visibility
-- **Pre-flight Reliability Suite** — run real inputs against 7 assertion types before drift ships: schema/field checks, `latency_under_ms`, `cost_under_cents` (per-LLM-node token cost from n8n output; Make on the roadmap), and `llm_judge` (Claude scores output quality against a criterion, with optional baseline comparison). Moves monitoring from "did it run" to "is the output good at a reasonable cost". _(Placeholder copy — marketing to refine.)_
+- **Pre-flight Reliability Suite** — run real inputs against 7 assertion types before drift ships: schema/field checks, `latency_under_ms`, `cost_under_cents` (per-LLM-node token cost from n8n output; Make on the roadmap), and `llm_judge` (Claude scores output quality against a criterion, with optional baseline comparison). Moves monitoring from "did it run" to "is the output good at a reasonable cost".
 - **Multi-tenant workspaces** with role-based access, AES-256-GCM credential encryption, and scheduled audits via Vercel Cron (15-min global sync)
 - **Lifetime Deal (LTD) plan** alongside subscription tiers, plus VAT-aware invoices and Stripe billing portal
 
@@ -42,6 +47,10 @@ Demo profiles render without calling the Claude API — they ship with pre-gener
 - **Email:** Resend (optional notifications)
 - **Testing:** Vitest (unit) + Playwright (E2E)
 - **CI/CD:** GitHub Actions → Vercel
+
+## Self-Hosting
+
+Runmend is open-source under the [MIT License](./LICENSE). The hosted product at runmend.app and this repository share the same codebase — running your own instance on Vercel + Supabase + Stripe gives you the full feature set, including AI diagnostics, the Pre-flight Reliability Suite, and LTD billing. Bring your own API keys; see [Environment Variables](#environment-variables) for the full list.
 
 ## Getting Started
 
@@ -202,4 +211,15 @@ src/
 6. **Vercel Cron:** requires Vercel Pro plan (free tier allows one cron, which is enough for `/api/cron/sync`)
 7. Verify: production URL loads, demo profiles render, Stripe checkout completes in test mode
 
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for dev setup, branch conventions, and the PR checklist. All participants are expected to follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+## Security
+
+To report a vulnerability, see [SECURITY.md](./SECURITY.md). Please do **not** open a public issue for security bugs.
+
+## License
+
+Released under the [MIT License](./LICENSE).
 

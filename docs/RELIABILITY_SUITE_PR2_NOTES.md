@@ -131,7 +131,7 @@ Anthropic calls in unit/CI; one gated integration test only.
   `/scenarios/[id]/runs/[runId]` rendering of all three new assertion types
   end-to-end requires a `preflight_run_results` row whose `assertion_results`
   contains latency/cost/judge outcomes in the test workspace, plus working
-  `test@runmend.app` auth. Neither a seeded run nor a completable login was
+  `<your-test-user>` auth. Neither a seeded run nor a completable login was
   available in the implementation environment (live Supabase + cookie
   consent). The component is lint-clean, type-clean, and covered by
   `next build`; Playwright `data-testid` hooks (`latency-bar`,
