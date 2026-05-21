@@ -118,7 +118,7 @@ All 8 original phases + production hardening + ship-readiness work complete, plu
 
 Stripe requires test/live keys + price IDs in env vars. Zapier may be re-added later with Partner Program OAuth access.
 
-Supabase project: `hrcctyebejialsbdyyle` (US East). Test user: `test@runmend.app` / `testpass123`.
+Self-hosters: bring your own Supabase project and create a test user with the auth flow in `src/app/(auth)/signup`.
 
 ## Deploy Checklist (Vercel)
 

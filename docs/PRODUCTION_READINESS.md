@@ -1,67 +1,68 @@
 # Runmend Production Readiness Plan
 
-**Status**: pre-launch • **Stan Supabase**: `hrcctyebejialsbdyyle` = production • **Stripe**: soft-launch w test mode → cutover na live • **Domena**: kupiona (uzupełnij `<YOUR_DOMAIN>` w przykładach poniżej) • **Analytics**: PostHog minimal z EU consent banner (kod gotowy, klucze w A1)
+**Status**: pre-launch • **Supabase state**: `<your-supabase-project-ref>` = production • **Stripe**: soft-launch in test mode → cutover to live • **Domain**: registered (fill in `<YOUR_DOMAIN>` in the examples below) • **Analytics**: PostHog minimal with EU consent banner (code ready, keys in A1)
 
-**Zrobione na branchu `main`** (w trakcie tej sesji):
+**Shipped on `main`** during this session:
 - `1ef76f4` — LTD refund reconciliation (retry + failed_refunds + email alert)
 - `32a6740` — A4 cron schedule, A6 Sentry release tracking, A7 `/api/health`
 - `458ce33` — cookie consent banner + PostHog consent gating
 
-Plan jest podzielony na cztery bloki. **Blok A = MUSI być zielony zanim podeślesz link pierwszemu beta userowi** (test mode). **Blok B = MUSI być zielony w dniu cutover na live Stripe**. Blok C = w pierwszym tygodniu po launch. Blok D = post-launch, kiedy będzie czas.
+The plan is split into four blocks. **Block A = MUST be green before you send the link to your first beta user** (test mode). **Block B = MUST be green on the day of cutover to live Stripe**. Block C = first week post-launch. Block D = post-launch, when there's time.
 
-Do każdego itemu jest: (1) co zrobić, (2) jak zweryfikować, (3) plik/ścieżka/komenda gdzie istotne. Odhaczaj po kolei.
+Every item lists: (1) what to do, (2) how to verify, (3) file/path/command where relevant. Check them off in order.
 
 ---
 
-## Block A — Soft-launch (test mode) | MUSI MIEĆ
+## Block A — Soft-launch (test mode) | MUST HAVE
 
-### A1. Wszystkie env vars w Vercel (Production scope)
+### A1. All env vars in Vercel (Production scope)
 
-Dashboard → Project → Settings → Environment Variables. Scope: **Production**. Dla każdego waliduj przez `vercel env ls production`. Komplet wymagany (lista ze `src/lib/env.ts:assertProductionEnv` + rozszerzona):
+Dashboard → Project → Settings → Environment Variables. Scope: **Production**. Validate each via `vercel env ls production`. Required set (from `src/lib/env.ts:assertProductionEnv` + extended):
 
-| Var | Wartość na soft-launch | Żródło |
+| Var | Soft-launch value | Source |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://hrcctyebejialsbdyyle.supabase.co` | Supabase → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<your-supabase-project-ref>.supabase.co` | Supabase → Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | publishable anon key | Supabase → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | **service_role secret** (nigdy nie commituj) | Supabase → Settings → API |
-| `ENCRYPTION_KEY` | 64-char hex (`openssl rand -hex 32`) | **wygeneruj raz, zapisz w 1Password** |
-| `STRIPE_SECRET_KEY` | `sk_test_…` (cutover na `sk_live_…` w Block B) | Stripe → Developers → API keys |
+| `SUPABASE_SERVICE_ROLE_KEY` | **service_role secret** (never commit) | Supabase → Settings → API |
+| `ENCRYPTION_KEY` | 64-char hex (`openssl rand -hex 32`) | **generate once, store in 1Password** |
+| `STRIPE_SECRET_KEY` | `sk_test_…` (cutover to `sk_live_…` in Block B) | Stripe → Developers → API keys |
 | `STRIPE_WEBHOOK_SECRET` | test webhook signing secret | Stripe → Developers → Webhooks |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_…` | Stripe |
 | `STRIPE_PRICE_STARTER` / `_PRO` / `_LTD` | test price IDs | Stripe → Products |
-| `CRON_SECRET` | `openssl rand -hex 32` | **wygeneruj raz** |
+| `CRON_SECRET` | `openssl rand -hex 32` | **generate once** |
 | `ANTHROPIC_API_KEY` | production key (rate-limited billing) | console.anthropic.com |
-| `RESEND_API_KEY` | production key z weryfikowanej domeny (A5) | resend.com |
-| `LTD_ALERT_EMAIL` | twój inbox np. `alerts@<YOUR_DOMAIN>` | — |
-| `LTD_ALERT_FROM` | `alerts@<YOUR_DOMAIN>` | musi być na verified domain |
+| `RESEND_API_KEY` | production key from verified domain (A5) | resend.com |
+| `LTD_ALERT_EMAIL` | your inbox, e.g. `alerts@<YOUR_DOMAIN>` | — |
+| `LTD_ALERT_FROM` | `alerts@<YOUR_DOMAIN>` | must be on verified domain |
 | `NEXT_PUBLIC_APP_URL` | `https://<YOUR_DOMAIN>` | — |
-| `NEXT_PUBLIC_SENTRY_DSN` | z Sentry → Project Settings → Client Keys | sentry.io |
-| `SENTRY_ORG` / `SENTRY_PROJECT` | slugi | sentry.io |
-| `SENTRY_AUTH_TOKEN` | `sntrys_…` — uprawnienie `project:releases` | sentry.io → User Auth Tokens |
+| `NEXT_PUBLIC_SENTRY_DSN` | from Sentry → Project Settings → Client Keys | sentry.io |
+| `SENTRY_ORG` / `SENTRY_PROJECT` | slugs | sentry.io |
+| `SENTRY_AUTH_TOKEN` | `sntrys_…` — `project:releases` permission | sentry.io → User Auth Tokens |
 | `NEXT_PUBLIC_POSTHOG_KEY` | `phc_…` (publishable project key) | posthog.com → Project → Settings → API |
-| `NEXT_PUBLIC_POSTHOG_HOST` | **EU zalecany**: `https://eu.i.posthog.com` (data residency + GDPR) | posthog.com |
+| `NEXT_PUBLIC_POSTHOG_HOST` | **EU recommended**: `https://eu.i.posthog.com` (data residency + GDPR) | posthog.com |
 
-**Weryfikacja**: `vercel env ls production | wc -l` ≥ 17. Trigger deploy po dodaniu — jeśli `assertProductionEnv()` znajdzie brak, deploy padnie przed uruchomieniem (zgodne z `instrumentation.ts:7-11`).
+**Verification**: `vercel env ls production | wc -l` ≥ 17. Trigger a deploy after adding — if `assertProductionEnv()` finds anything missing, deploy fails before runtime (per `instrumentation.ts:7-11`).
 
-> **`ANTHROPIC_API_KEY` — od PR #2 zasila też Pre-flight `llm_judge`.**
-> Każdy input z asercją `llm_judge` wykonuje jeden wywołanie Claude
-> (model = `CLAUDE_MODEL` lub `claude-sonnet-4-5-20250929`), `max_tokens`
-> ograniczone do `JUDGE_MAX_OUTPUT_TOKENS = 2000`, prompt do
-> `JUDGE_MAX_PROMPT_CHARS = 32000`. Koszt tokenów wlicza się do
-> `preflight_runs.total_cost_cents` i jest ograniczony per-scenariusz przez
-> `cost_cap_cents`. **Brak klucza nie wywala runu** — `llm_judge` degraduje
-> do nie-krytycznego warna (`reason: judge_unavailable`). Diagnostyka AI
-> działa jak dotąd; to dodatkowy, opcjonalny konsument tego samego klucza.
+> **`ANTHROPIC_API_KEY` — since PR #2 it also powers Pre-flight `llm_judge`.**
+> Each input with an `llm_judge` assertion triggers one Claude call
+> (model = `CLAUDE_MODEL` or `claude-sonnet-4-5-20250929`), `max_tokens`
+> capped to `JUDGE_MAX_OUTPUT_TOKENS = 2000`, prompt to
+> `JUDGE_MAX_PROMPT_CHARS = 32000`. Token cost is accumulated in
+> `preflight_runs.total_cost_cents` and capped per scenario by
+> `cost_cap_cents`. **Missing key does not fail the run** — `llm_judge`
+> degrades to a non-critical warning (`reason: judge_unavailable`). AI
+> diagnostics work as before; this is an additional, optional consumer of
+> the same key.
 
-### A2. Domena wpięta do Vercel + SSL aktywny
+### A2. Domain connected to Vercel + SSL active
 
-Vercel → Project → Settings → Domains → Add `<YOUR_DOMAIN>` + `www.<YOUR_DOMAIN>` (przekieruj www→apex). Dodaj rekordy DNS u rejestratora per Vercel instructions. Poczekaj na SSL.
+Vercel → Project → Settings → Domains → Add `<YOUR_DOMAIN>` + `www.<YOUR_DOMAIN>` (redirect www → apex). Add DNS records at your registrar per Vercel instructions. Wait for SSL.
 
-**Weryfikacja**: `curl -I https://<YOUR_DOMAIN>` → HTTP 200, certyfikat Let's Encrypt ważny; `curl -I http://<YOUR_DOMAIN>` → 308 na https.
+**Verification**: `curl -I https://<YOUR_DOMAIN>` → HTTP 200, valid Let's Encrypt cert; `curl -I http://<YOUR_DOMAIN>` → 308 to https.
 
 ### A3. Supabase Auth redirect URLs
 
-Supabase Dashboard → Authentication → URL Configuration. Dodaj do "Redirect URLs":
+Supabase Dashboard → Authentication → URL Configuration. Add to "Redirect URLs":
 
 ```
 https://<YOUR_DOMAIN>/callback
@@ -71,227 +72,227 @@ https://<YOUR_DOMAIN>/**
 
 Site URL: `https://<YOUR_DOMAIN>`.
 
-**Weryfikacja**: signup na prod, link z email kieruje na prod, nie na localhost.
+**Verification**: sign up on prod, the email link points to prod, not localhost.
 
-### A4. Vercel Cron — zdefiniuj w `vercel.json` ✅ DONE (commit `32a6740`)
+### A4. Vercel Cron — defined in `vercel.json` ✅ DONE (commit `32a6740`)
 
-`vercel.json` ma teraz harmonogram co 15 min na `/api/cron/sync`. Vercel automatycznie dorzuca `Authorization: Bearer ${CRON_SECRET}` header → `src/app/api/cron/sync/route.ts:20-24` to waliduje. **Wymaga Vercel Pro** (free tier ma 1 cron, wystarczy).
+`vercel.json` now has a 15-min schedule on `/api/cron/sync`. Vercel automatically attaches an `Authorization: Bearer ${CRON_SECRET}` header → validated in `src/app/api/cron/sync/route.ts:20-24`. **Requires Vercel Pro** (free tier allows 1 cron, which is enough).
 
-**Weryfikacja po deploy**: Vercel → Project → Crons pokazuje wpis; Vercel → Logs pokazuje GET /api/cron/sync co 15 min z 200 response.
+**Verification after deploy**: Vercel → Project → Crons shows the entry; Vercel → Logs shows GET /api/cron/sync every 15 min with a 200 response.
 
-### A5. Resend — weryfikacja domeny (DKIM/SPF)
+### A5. Resend — domain verification (DKIM/SPF)
 
-Resend → Domains → Add Domain `<YOUR_DOMAIN>`. Dodaj 3 rekordy DNS (TXT SPF, DKIM CNAME, TXT DMARC). To jest wymagane żeby `alerts@<YOUR_DOMAIN>` nie lądowało w spam/blokowało Resend.
+Resend → Domains → Add Domain `<YOUR_DOMAIN>`. Add 3 DNS records (TXT SPF, DKIM CNAME, TXT DMARC). Required so `alerts@<YOUR_DOMAIN>` doesn't land in spam or get blocked by Resend.
 
-**Weryfikacja**: Resend dashboard pokazuje "Verified"; test: wymuś LTD oversold path lokalnie z prod key → email dociera do inbox (nie spam).
+**Verification**: Resend dashboard shows "Verified"; test: force the LTD oversold path locally with the prod key → email arrives in inbox (not spam).
 
 ### A6. Sentry — source maps + release tracking ✅ DONE (commit `32a6740`)
 
-`next.config.mjs` ma teraz `release.name = VERCEL_GIT_COMMIT_SHA`. Jeśli `SENTRY_AUTH_TOKEN` jest w Vercel (A1), auto-upload source maps odpala się na każdy build i tagguje release commit SHA.
+`next.config.mjs` now has `release.name = VERCEL_GIT_COMMIT_SHA`. If `SENTRY_AUTH_TOKEN` is in Vercel (A1), source map auto-upload runs on every build and tags the release with the commit SHA.
 
-**Weryfikacja po deploy**: Sentry → Releases pokazuje nowy release ze skojarzonymi source maps; przy błędzie stack trace pokazuje oryginalne pliki TS, nie `chunks/*.js`.
+**Verification after deploy**: Sentry → Releases shows the new release with associated source maps; on error the stack trace shows original TS files, not `chunks/*.js`.
 
 ### A7. `/api/health` endpoint (smoke + uptime probe) ✅ DONE (commit `32a6740`)
 
-`src/app/api/health/route.ts` zwraca `{status:"ok", ts}`. Używany w B6 przez uptime monitor.
+`src/app/api/health/route.ts` returns `{status:"ok", ts}`. Used in B6 by the uptime monitor.
 
-**Weryfikacja po deploy**: `curl https://<YOUR_DOMAIN>/api/health` → `{"status":"ok",…}`.
+**Verification after deploy**: `curl https://<YOUR_DOMAIN>/api/health` → `{"status":"ok",…}`.
 
-### A8. Smoke test full flow na prod
+### A8. Smoke test full flow on prod
 
-Ręczny 15-min test za pomocą Playwright MCP lub manualnie:
+Manual 15-min test using Playwright MCP or manually:
 
-1. Signup z prawdziwego emaila → potwierdź inbox
+1. Sign up with a real email → confirm via inbox
 2. Create workspace
-3. Dodaj Make connection (test API key)
-4. Sync → profile ma automations
-5. Zamów LTD checkout w **test mode** (karta `4242 4242 4242 4242`)
-6. Webhook przychodzi → subscription w DB ma `is_ltd=true`
-7. Zaloguj się na drugim koncie, zweryfikuj że nie widzi cudzego workspace (RLS)
+3. Add a Make connection (test API key)
+4. Sync → profile has automations
+5. Place an LTD checkout in **test mode** (card `4242 4242 4242 4242`)
+6. Webhook arrives → subscription in DB has `is_ltd=true`
+7. Log in on a second account, verify it can't see the other workspace (RLS)
 
-**Weryfikacja**: każdy krok zielony. Jeśli coś jest czerwone, **fix before link publishing**.
+**Verification**: every step green. If anything is red, **fix before publishing the link**.
 
-### A9. Rollback plan udokumentowany
+### A9. Rollback plan documented
 
-Vercel ma Instant Rollback z UI (Deployments → ostatni good → Promote). Zapisz sobie:
-- link do dashboardu deployments
-- kto ma uprawnienia do promote (tylko ty, chyba że dodasz teammate'a)
+Vercel has Instant Rollback from the UI (Deployments → last good → Promote). Note down:
+- link to the deployments dashboard
+- who has permission to promote (just you, unless you add a teammate)
 
-**Weryfikacja**: wymuś bad deploy lokalnie (np. syntax error na preview) → zobacz że rollback działa w < 30s.
+**Verification**: force a bad deploy locally (e.g. syntax error on preview) → confirm rollback works in < 30s.
 
-### A10. PostHog analytics + EU cookie consent ⚠️ CZĘŚCIOWO DONE (commit `458ce33`)
+### A10. PostHog analytics + EU cookie consent ⚠️ PARTIALLY DONE (commit `458ce33`)
 
-**Kod gotowy**:
+**Code ready**:
 - `src/components/CookieConsent.tsx` — fixed-bottom banner, localStorage-persisted, Accept/Decline
-- `src/components/PostHogProvider.tsx` — gating: `posthog.init()` odpala się **tylko** po `Accept` (custom event + storage); `Decline` i brak decyzji = zero trackingu
-- Banner pokazuje się raz per browser; po wyborze znika, decyzja trzymana w `localStorage["runmend-consent"]`
+- `src/components/PostHogProvider.tsx` — gating: `posthog.init()` fires **only** after `Accept` (custom event + storage); `Decline` and no decision = zero tracking
+- Banner shows once per browser; after a choice it disappears, decision held in `localStorage["runmend-consent"]`
 
-**Co zostało ręcznie**:
-1. Zarejestruj się na posthog.com (EU region — data residency). Stwórz projekt.
-2. Dodaj `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com` do Vercel env (A1).
-3. **Ważne gap**: banner linkuje do `/privacy` które jeszcze nie istnieje (B4). Przed publikacją launchu albo stwórz stronę privacy policy albo zmień link. 404 w bannerze to gorszy UX niż brak linku.
+**Still manual**:
+1. Register on posthog.com (EU region — data residency). Create a project.
+2. Add `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com` to Vercel env (A1).
+3. **Known gap**: the banner links to `/privacy` which doesn't exist yet (B4). Before publishing the launch, either create a privacy policy page or change the link. A 404 in the banner is worse UX than no link.
 
-**Weryfikacja po deploy**:
-- Pierwszy visit na `https://<YOUR_DOMAIN>` → banner widoczny na dole
-- Click `Accept` → PostHog → Live events pokazuje pageview w < 5s
-- Click `Decline`, refresh, przejdź przez kilka stron → PostHog → Live events **nic** nie pokazuje
-- `localStorage` w DevTools: klucz `runmend-consent` = `accept` lub `decline`
+**Verification after deploy**:
+- First visit to `https://<YOUR_DOMAIN>` → banner visible at the bottom
+- Click `Accept` → PostHog → Live events shows a pageview in < 5s
+- Click `Decline`, refresh, navigate a few pages → PostHog → Live events shows **nothing**
+- `localStorage` in DevTools: key `runmend-consent` = `accept` or `decline`
 
-**Scope (wybrany minimal)**: tylko pageview + pageleave auto-capture. Brak `posthog.identify()` po login, brak custom events (signup, ltd_checkout, oversold). Dodaj jeżeli będziesz chciał pełny funnel — patrz C-block dodatek niżej.
+**Scope (chosen minimal)**: pageview + pageleave auto-capture only. No `posthog.identify()` after login, no custom events (signup, ltd_checkout, oversold). Add them if you want a full funnel — see Block C addendum below.
 
 ---
 
-## Block B — Cutover na Stripe live | MUSI MIEĆ przed prawdziwą płatnością
+## Block B — Cutover to live Stripe | MUST HAVE before real payment
 
-Rób **dopiero** gdy Block A działa stabilnie ≥ 2-3 dni i masz 2-3 beta userów z testowymi transakcjami.
+Do this **only** after Block A has been stable ≥ 2-3 days and you have 2-3 beta users with test transactions.
 
 ### B1. Stripe business verification
 
-Stripe Dashboard → Activate account. Wprowadź NIP/VAT, adres, bank account, owner ID. Trwa 1-3 dni. **Bez tego `sk_live_…` nie działa.**
+Stripe Dashboard → Activate account. Enter VAT/tax ID, address, bank account, owner ID. Takes 1-3 days. **Without it, `sk_live_…` does not work.**
 
-**Weryfikacja**: Stripe dashboard pokazuje "Activated" badge, nie "Test mode only".
+**Verification**: Stripe dashboard shows "Activated" badge, not "Test mode only".
 
-### B2. Live keys + live price IDs w Vercel
+### B2. Live keys + live price IDs in Vercel
 
-Duplikuj produkty z test mode do live (Stripe → Products → toggle "View test data" OFF → Create product). Zapisz nowe live price IDs.
+Duplicate products from test mode to live (Stripe → Products → toggle "View test data" OFF → Create product). Note the new live price IDs.
 
-Replace w Vercel env (Production):
+Replace in Vercel env (Production):
 - `STRIPE_SECRET_KEY` → `sk_live_…`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` → `pk_live_…`
 - `STRIPE_PRICE_STARTER` / `_PRO` / `_LTD` → live price IDs
-- `STRIPE_WEBHOOK_SECRET` — **zostaw na razie**, wymień w B3
+- `STRIPE_WEBHOOK_SECRET` — **leave for now**, swap in B3
 
-**Weryfikacja**: po deployu zrób test checkout — powinieneś dostać live URL (`checkout.stripe.com/c/pay/cs_live_…`).
+**Verification**: after deploy, run a test checkout — you should get a live URL (`checkout.stripe.com/c/pay/cs_live_…`).
 
 ### B3. Live webhook endpoint
 
-Stripe → Developers → Webhooks (live mode) → Add endpoint `https://<YOUR_DOMAIN>/api/billing/webhook`. Wybierz eventy: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.updated`, `invoice.payment_failed`. Zapisz signing secret jako `STRIPE_WEBHOOK_SECRET` w Vercel (nadpisz test-mode secret). Redeploy.
+Stripe → Developers → Webhooks (live mode) → Add endpoint `https://<YOUR_DOMAIN>/api/billing/webhook`. Select events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.updated`, `invoice.payment_failed`. Save the signing secret as `STRIPE_WEBHOOK_SECRET` in Vercel (overwrite the test-mode secret). Redeploy.
 
-**Weryfikacja**: Stripe → Webhooks → Send test webhook → webhook response 200; Supabase `stripe_webhook_events` table ma nowy event_id.
+**Verification**: Stripe → Webhooks → Send test webhook → webhook response 200; Supabase `stripe_webhook_events` table has a new event_id.
 
 ### B4. Terms / Privacy / Refund policy
 
-Checkout sessions wymagają `terms_of_service_url` + `privacy_url` w Stripe dashboard Brand settings (compliance). LTD refund policy to legal must-have przy lifetime deal.
+Checkout sessions require `terms_of_service_url` + `privacy_url` in Stripe dashboard Brand settings (compliance). LTD refund policy is a legal must-have for a lifetime deal.
 
-Stwórz 3 strony (lub statyczne routes):
+Create 3 pages (or static routes):
 - `/terms`, `/privacy`, `/refund-policy`
 
-Minimum: skopiuj template z https://stripe.com/legal + dostosuj do LTD ("60-day refund window, afterwards non-refundable except failed service delivery"). Skonsultuj z prawnikiem dla PL/EU compliance (GDPR, konsument).
+Minimum: copy a template from https://stripe.com/legal + tailor for LTD ("60-day refund window, otherwise non-refundable except failed service delivery"). Consult a lawyer for EU consumer / GDPR compliance.
 
-**Weryfikacja**: Stripe → Settings → Branding → Public details ma wpisane 2 URLs; checkout session UI pokazuje footer link.
+**Verification**: Stripe → Settings → Branding → Public details has both URLs filled in; checkout session UI shows the footer link.
 
-### B5. LTD seat count w DB
+### B5. LTD seat count in DB
 
-Default w `ltd_allocations.total_seats = 20` (`supabase/migrations/20260424000001_ltd_and_billing_details.sql:15`). Decyzja: zostawić 20 czy zwiększyć? Zmiana:
+Default in `ltd_allocations.total_seats = 20` (`supabase/migrations/20260424000001_ltd_and_billing_details.sql:15`). Decision: leave at 20 or increase? Change:
 
 ```sql
 UPDATE public.ltd_allocations SET total_seats = 100 WHERE id = 1;
 ```
 
-Wykonaj przez Supabase MCP (`mcp__supabase__execute_sql`) lub SQL Editor w dashboardzie. **Decyzja bizowa, nie techniczna** — ale to jedyna zmienna LTD, którą musisz świadomie wybrać przed launchem.
+Run via Supabase MCP (`mcp__supabase__execute_sql`) or the SQL Editor in the dashboard. **Business decision, not technical** — but it's the only LTD variable you need to consciously choose before launch.
 
-**Weryfikacja**: `SELECT total_seats, seats_sold FROM ltd_allocations;` pokazuje twoje target value.
+**Verification**: `SELECT total_seats, seats_sold FROM ltd_allocations;` shows your target value.
 
 ### B6. Uptime monitor (external)
 
-Vercel nie mierzy własnego uptime dla alerting. Dodaj zewnętrzny monitor (Better Stack free / UptimeRobot free / Cronitor):
-- URL: `https://<YOUR_DOMAIN>/api/health` (z A7)
-- Interwał: 1 min
-- Alert channel: email + SMS jeśli płatne
+Vercel does not measure its own uptime for alerting. Add an external monitor (Better Stack free / UptimeRobot free / Cronitor):
+- URL: `https://<YOUR_DOMAIN>/api/health` (from A7)
+- Interval: 1 min
+- Alert channel: email + SMS if paid
 
-**Weryfikacja**: celowo wywołaj downtime (suspend deploy → resume) → monitor wysyła alert w < 3 min.
+**Verification**: deliberately cause downtime (suspend deploy → resume) → monitor sends alert in < 3 min.
 
 ---
 
-## Block C — Pierwszy tydzień post-launch | STRONG RECOMMENDATION
+## Block C — First week post-launch | STRONG RECOMMENDATION
 
 ### C1. Sentry — alert rules
 
-Sentry → Alerts → Create. Minimum 2 reguły:
-1. **Fatal-level event** → email w < 5 min (to capture LTD refund failures z `webhook/route.ts` post-dzisiejszy fix).
-2. **Error spike** (> 20 w 15 min) → email.
+Sentry → Alerts → Create. Minimum 2 rules:
+1. **Fatal-level event** → email in < 5 min (to catch LTD refund failures from `webhook/route.ts` post today's fix).
+2. **Error spike** (> 20 in 15 min) → email.
 
 ### C2. Vercel Analytics + Speed Insights
 
-Vercel → Project → Analytics → Enable. **Free dla hobby, metered dla Pro** — zobacz cennik. Dane o Core Web Vitals z prod trafiają do Vercel. Integracja: dodać `@vercel/analytics` + `<Analytics />` w `app/layout.tsx`.
+Vercel → Project → Analytics → Enable. **Free on hobby, metered on Pro** — check pricing. Core Web Vitals data from prod flows to Vercel. Integration: add `@vercel/analytics` + `<Analytics />` in `app/layout.tsx`.
 
 ### C3. Supabase Point-in-Time Recovery (PITR)
 
-Supabase → Project → Settings → Add-ons → PITR. **Wymaga Pro ($25/mo)**. Bez tego backup = daily pg_dump, 7 dni retention, ale przy incydencie tracisz do 24h danych. Z PITR — restore do dowolnego momentu w oknie (7 / 14 / 28 dni wg planu).
+Supabase → Project → Settings → Add-ons → PITR. **Requires Pro ($25/mo)**. Without it, backup = daily pg_dump, 7-day retention, but on incident you can lose up to 24h of data. With PITR — restore to any moment in the window (7 / 14 / 28 days per plan).
 
-**Decyzja**: włącz od dnia launch (nie retrospektywnie — PITR chroni tylko przyszłość).
+**Decision**: enable from launch day (not retroactively — PITR only protects the future).
 
 ### C4. Rate limiting review
 
-Obecnie `src/lib/platform-adapters/retry.ts` chroni tylko calls wychodzące z Runmend. **Nie ma** rate limitingu na ingress API routes (Stripe-paid user może wywołać `/api/connections/[id]/test` 1000×/s). Na launch day przy małym trafficu to OK, ale dorzuć:
-- Vercel Edge Config lub Upstash Redis dla rate limit
-- Minimum: 60 req/min na `/api/*` per user
+Currently `src/lib/platform-adapters/retry.ts` protects only outbound calls from Runmend. There is **no** rate limiting on ingress API routes (a paid Stripe user could hit `/api/connections/[id]/test` 1000×/s). On launch day with low traffic this is fine, but add:
+- Vercel Edge Config or Upstash Redis for rate limit
+- Minimum: 60 req/min on `/api/*` per user
 
 ### C5. GDPR — data export + deletion
 
-EU users mają prawo do eksportu i skasowania swoich danych (Supabase ma RLS więc workspace-scoped delete jest łatwy). Brak UI do tego. Minimum:
+EU users have the right to export and delete their data (Supabase has RLS so workspace-scoped delete is easy). There's no UI for it. Minimum:
 - Settings → Danger Zone → "Export my data" (JSON dump)
-- "Delete my account" — hard delete user + wszystkie workspaces gdzie jest sole owner
+- "Delete my account" — hard delete the user + all workspaces where they're sole owner
 
-**Ważne przy LTD**: przy delete zwolnij seat? Decyzja bizowa — zwyczajowo NIE (LTD to nabyty asset), ale udokumentuj w refund policy.
+**Important with LTD**: on delete, release the seat? Business decision — typically NO (LTD is a purchased asset), but document it in the refund policy.
 
-### C6. Post-launch audit backlog (z `docs/PRODUCTION_READINESS.md` planu audytu)
+### C6. Post-launch audit backlog (from the audit-plan version of `docs/PRODUCTION_READINESS.md`)
 
-Te items były out-of-scope dzisiejszego fixu (commit 1ef76f4), ale są do zrobienia w ciągu tygodnia:
-- **F1**: `revalidatePath` w `POST /api/connections` (cross-route Router Cache staleness) — **~10 min fix**
-- **F7**: `settings/loading.tsx:13` `length: 7` → `length: 9` — **30-sek fix**
-- **F3**: polling `/api/billing/ltd-status` dla delayed-webhook UX — jeśli >1 user zgłosi "paid but no seat"
+These items were out of scope for today's fix (commit `1ef76f4`), but should be done within the week:
+- **F1**: `revalidatePath` in `POST /api/connections` (cross-route Router Cache staleness) — **~10 min fix**
+- **F7**: `settings/loading.tsx:13` `length: 7` → `length: 9` — **30-second fix**
+- **F3**: polling `/api/billing/ltd-status` for delayed-webhook UX — if >1 user reports "paid but no seat"
 
-### C7. PostHog — upgrade z minimal do standard (opcjonalne)
+### C7. PostHog — upgrade from minimal to standard (optional)
 
-Obecnie tylko pageview/pageleave. Jeśli chcesz pełny LTD funnel w PH dashboard, dorzuć:
-- `posthog.identify(user.id, { email })` w auth callback / po login
-- Capture events na kluczowych akcjach: `signup_completed`, `connection_added`, `profile_created`, `ltd_checkout_started`, `ltd_checkout_completed`, `oversold_refund`
-- Guard każdy capture pod `typeof posthog !== "undefined"` (bo PH init dopiero po Accept consent)
+Currently only pageview/pageleave. If you want a full LTD funnel in the PH dashboard, add:
+- `posthog.identify(user.id, { email })` in the auth callback / after login
+- Capture events on key actions: `signup_completed`, `connection_added`, `profile_created`, `ltd_checkout_started`, `ltd_checkout_completed`, `oversold_refund`
+- Guard each capture with `typeof posthog !== "undefined"` (because PH init only happens after Accept consent)
 
-**Decyzja**: zrób jeżeli w pierwszym tygodniu nie rozumiesz co user robi przed checkoutem. Na start minimal wystarczy.
-
----
-
-## Block D — Post-launch, gdy będzie czas | NICE TO HAVE
-
-- **F4**: pgbench concurrency test dla `claim_ltd_seat` (empiryczny dowód EPQ safety)
-- **F5**: webhook retry test w unit suite
-- **F6**: Playwright 3G throttle E2E dla CLS
-- **F8**: production-build integration test React.cache shim
-- **F9**: admin dead-letter panel dla `failed_refunds` + `stripe_webhook_events`
-- **Security audit**: `npm audit`, Snyk scan, dependency review przed każdą major release
-- **Load test**: k6 lub artillery na kluczowe endpointy (`/api/cron/sync`, diagnostic, signup)
-- **Penetration testing**: nawet 2h z OWASP ZAP baseline scan
-- **Terms consent gating**: checkbox na signup "I agree to ToS + Privacy" (niektóre jurysdykcje wymagają)
-- **PostHog full**: session recording + feature flags + reverse proxy (patrz C7 dla standard upgrade najpierw)
-- **Consent preferences UI**: "change cookie preferences" link w footerze żeby user mógł zmienić zdanie (obecnie tylko localStorage clear)
+**Decision**: do it if in the first week you don't understand what users are doing before checkout. Minimal is enough at the start.
 
 ---
 
-## Kolejność działań (rekomendacja)
+## Block D — Post-launch, when there's time | NICE TO HAVE
 
-**Dzień 0 (dziś / jutro)** — kod gotowy (A4/A6/A7/A10 ✅), zostają dashboardy:
-1. **A1** — wszystkie env vars w Vercel (30-60 min)
-   - W tym: zarejestruj się na posthog.com (EU region), weź `phc_…` key
-2. **A2** — domena + SSL (wait time 1-24h zależnie od DNS TTL)
+- **F4**: pgbench concurrency test for `claim_ltd_seat` (empirical EPQ safety proof)
+- **F5**: webhook retry test in the unit suite
+- **F6**: Playwright 3G throttle E2E for CLS
+- **F8**: production-build integration test of the React.cache shim
+- **F9**: admin dead-letter panel for `failed_refunds` + `stripe_webhook_events`
+- **Security audit**: `npm audit`, Snyk scan, dependency review before every major release
+- **Load test**: k6 or artillery against key endpoints (`/api/cron/sync`, diagnostic, signup)
+- **Penetration testing**: even 2h with an OWASP ZAP baseline scan
+- **Terms consent gating**: checkbox on signup "I agree to ToS + Privacy" (required in some jurisdictions)
+- **PostHog full**: session recording + feature flags + reverse proxy (see C7 for the standard upgrade first)
+- **Consent preferences UI**: "change cookie preferences" link in the footer so users can change their mind (currently only localStorage clear)
+
+---
+
+## Recommended order
+
+**Day 0 (today / tomorrow)** — code is ready (A4/A6/A7/A10 ✅), the dashboards remain:
+1. **A1** — all env vars in Vercel (30-60 min)
+   - Including: sign up on posthog.com (EU region), grab the `phc_…` key
+2. **A2** — domain + SSL (wait time 1-24h depending on DNS TTL)
 3. **A5** — Resend DKIM/SPF (wait time 1-24h)
 4. **A3** — Supabase redirect URLs
-5. **A8** — smoke test (włącz test Accept/Decline bannera w DevTools)
-6. **A9** — zapisz rollback procedure
+5. **A8** — smoke test (test Accept/Decline banner in DevTools)
+6. **A9** — write down the rollback procedure
 
-**Dni 1-3 (soft-launch beta, test mode)**:
-- 2-5 test checkoutów, obserwuj Sentry/logs/PostHog
-- **B1** — Stripe business verification (równolegle, 1-3 dni)
+**Days 1-3 (soft-launch beta, test mode)**:
+- 2-5 test checkouts, watch Sentry/logs/PostHog
+- **B1** — Stripe business verification (in parallel, 1-3 days)
 
-**Dzień ~4 (cutover)**:
-7. **B2-B4** — live keys + webhook + **legal pages (w tym /privacy — wymagana przez banner!)**
-8. **B5** — LTD seat count decyzja
+**Day ~4 (cutover)**:
+7. **B2-B4** — live keys + webhook + **legal pages (including /privacy — required by the banner!)**
+8. **B5** — LTD seat count decision
 9. **B6** — uptime monitor
 10. **public launch** 🚀
 
-**Tydzień 2**:
-11. **C1-C7** — observability + GDPR + backlog + PostHog standard upgrade (opcjonalnie)
+**Week 2**:
+11. **C1-C7** — observability + GDPR + backlog + PostHog standard upgrade (optional)
 
-**Później**:
-12. **D-block** gdy będzie czas
+**Later**:
+12. **D-block** when there's time

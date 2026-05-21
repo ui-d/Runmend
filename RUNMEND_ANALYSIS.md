@@ -235,7 +235,7 @@ Styling: Tailwind CSS, HSL CSS variables, class-based dark mode.
 
 ---
 
-## 9. Stan projektu i metryki
+## 9. Project state and metrics
 
 | Metryka | Wartość |
 |---|---|
@@ -270,11 +270,11 @@ Styling: Tailwind CSS, HSL CSS variables, class-based dark mode.
 
 ## 10. Deployment
 
-- **Hosting:** Vercel (auto-deploy z main branch)
-- **Database:** Supabase (projekt `hrcctyebejialsbdyyle`, US East)
-- **Cron:** Supabase pg_cron + pg_net (co 15 min)
+- **Hosting:** Vercel (auto-deploy from main branch)
+- **Database:** Supabase (project `<your-supabase-project-ref>`, US East)
+- **Cron:** Supabase pg_cron + pg_net (every 15 min)
 - **CI:** GitHub Actions (lint, typecheck, tests)
-- **Env vars:** 14 zmiennych (ENCRYPTION_KEY, Stripe keys, Supabase keys, Sentry, Resend, etc.)
+- **Env vars:** 14 variables (ENCRYPTION_KEY, Stripe keys, Supabase keys, Sentry, Resend, etc.)
 
 ---
 

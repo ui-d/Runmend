@@ -4,11 +4,11 @@
 
 Runmend is production monitoring for **Make.com** and **n8n** agencies. Multi-zone Make (us1/eu1/eu2/us2) + self-hosted n8n, six failure detectors per audit, Claude-written post-mortems, per-channel alerting, and a new **Pre-flight Check** suite that runs real inputs against assertions to catch drift before it ships. Built for ops teams running many client automations in production where being told before the client tells you matters.
 
-**Repo**: `/Users/dawidnawrocki/Desktop/runmend`
+**Repo**: GitHub `ui-d/runmend`
 **Branch**: `main` (clean) · **HEAD**: `d71a85c`
 **Package**: `runmend@0.1.0`
-**Supabase project**: `hrcctyebejialsbdyyle` (US East)
-**Test user**: `test@runmend.app` / `testpass123`
+**Supabase project**: bring-your-own (see `.env.example` → `NEXT_PUBLIC_SUPABASE_URL`)
+**Test user**: create via the signup flow on your own Supabase instance
 
 ## Tech Stack (exact versions)
 
